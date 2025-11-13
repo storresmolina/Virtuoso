@@ -1,0 +1,190 @@
+.students {
+  padding: 2rem;
+}
+
+.students-header {
+  margin-bottom: 2rem;
+}
+
+.students-header h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  color: #333;
+}
+
+.students-header p {
+  margin: 0;
+  color: #666;
+  font-size: 1rem;
+}
+
+.students-filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.filter-select,
+.search-input {
+  padding: 0.75rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  background: white;
+}
+
+.filter-select {
+  cursor: pointer;
+}
+
+.filter-select:focus,
+.search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.students-table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+}
+
+.students-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.students-table thead {
+  background: #f8f9fa;
+  border-bottom: 2px solid #ddd;
+}
+
+.students-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.students-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.students-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.student-name {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.student-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-badge.active {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.inactive {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.progress-bar {
+  width: 100px;
+  height: 6px;
+  background: #eee;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.3rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.action-link {
+  padding: 0.4rem 0.8rem;
+  background: #f0f1f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #667eea;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.action-link:hover {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+@media (max-width: 768px) {
+  .students {
+    padding: 1rem;
+  }
+
+  .students-filters {
+    flex-direction: column;
+  }
+
+  .filter-select,
+  .search-input {
+    width: 100%;
+  }
+
+  .students-table {
+    font-size: 0.85rem;
+  }
+
+  .students-table th,
+  .students-table td {
+    padding: 0.75rem;
+  }
+
+  .progress-bar {
+    width: 60px;
+  }
+}
