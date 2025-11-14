@@ -37,6 +37,11 @@ body {
   background: #f5f7fa;
 }
 
+.main-content.full-width {
+  margin-left: 0;
+  overflow: hidden;
+}
+
 @media (max-width: 768px) {
   .app-container {
     flex-direction: column;
