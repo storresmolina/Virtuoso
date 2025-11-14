@@ -1,12 +1,18 @@
 import React from 'react';
 import './Dashboard.css';
+import { students as STUDENTS } from '../data/students';
 
-export const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onOpenStudent?: (id: string) => void;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ onOpenStudent }) => {
+  const students = STUDENTS;
   return (
     <div className="dashboard">
       <div className="dashboard-header">
         <h2>Dashboard</h2>
-        <p>Welcome back! Here's an overview of your classes.</p>
+        <p>Welcome back! Manage your private student classrooms below.</p>
       </div>
 
       <div className="dashboard-grid">
@@ -14,17 +20,11 @@ export const Dashboard: React.FC = () => {
           <div className="stat-icon">👥</div>
           <div className="stat-content">
             <h3>Total Students</h3>
-            <p className="stat-number">24</p>
+            <p className="stat-number">{students.length}</p>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon">🎼</div>
-          <div className="stat-content">
-            <h3>Active Classes</h3>
-            <p className="stat-number">3</p>
-          </div>
-        </div>
+        
 
         <div className="stat-card">
           <div className="stat-icon">📄</div>
@@ -44,33 +44,23 @@ export const Dashboard: React.FC = () => {
       </div>
 
       <div className="dashboard-section">
-        <h3>Recent Classes</h3>
-        <div className="class-list">
-          <div className="class-item">
-            <div className="class-info">
-              <h4>Piano Basics 101</h4>
-              <p>25 students • Last updated 2 hours ago</p>
+        <h3>Your Students (Classrooms)</h3>
+        <div className="students-grid">
+          {students.map(student => (
+            <div key={student.id} className={`student-card`} onClick={() => onOpenStudent ? onOpenStudent(student.id) : undefined}>
+              <div className="student-avatar">{student.name.charAt(0)}</div>
+              <div className="student-info">
+                <h4>{student.name}</h4>
+                <p>{student.className} • Last active {student.lastActive}</p>
+              </div>
+              <div className="student-actions">
+                <button className="class-action-btn" onClick={(e) => { e.stopPropagation(); onOpenStudent ? onOpenStudent(student.id) : undefined; }}>Open</button>
+              </div>
             </div>
-            <button className="class-action-btn">View</button>
-          </div>
-
-          <div className="class-item">
-            <div className="class-info">
-              <h4>Advanced Techniques</h4>
-              <p>18 students • Last updated 1 day ago</p>
-            </div>
-            <button className="class-action-btn">View</button>
-          </div>
-
-          <div className="class-item">
-            <div className="class-info">
-              <h4>Music Theory Intermediate</h4>
-              <p>22 students • Last updated 3 days ago</p>
-            </div>
-            <button className="class-action-btn">View</button>
-          </div>
+          ))}
         </div>
       </div>
+      
     </div>
   );
 };

@@ -2,28 +2,30 @@ import { useState } from 'react'
 import './App.css'
 import { Sidebar } from './components/layout/Sidebar'
 import { Dashboard } from './pages/Dashboard'
-import { DocumentsDashboard } from './pages/DocumentsDashboard'
-import { Notebooks } from './pages/Notebooks'
 import { Students } from './pages/Students'
 import { Settings } from './pages/Settings'
+import { StudentPage } from './pages/StudentPage'
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard />
-      case 'documents':
-        return <DocumentsDashboard />
-      case 'notebooks':
-        return <Notebooks />
+        return <Dashboard onOpenStudent={(id: string) => { setSelectedStudentId(id); setActiveTab('student'); }} />
       case 'students':
-        return <Students />
+        return <Students onOpenStudent={(id: string) => { setSelectedStudentId(id); setActiveTab('student'); }} />
+      case 'student':
+        return selectedStudentId ? (
+          <StudentPage studentId={selectedStudentId} onBack={() => { setSelectedStudentId(null); setActiveTab('students'); }} />
+        ) : (
+          <Students onOpenStudent={(id: string) => { setSelectedStudentId(id); setActiveTab('student'); }} />
+        )
       case 'settings':
         return <Settings />
       default:
-        return <Dashboard />
+        return <Dashboard onOpenStudent={(id: string) => { setSelectedStudentId(id); setActiveTab('student'); }} />
     }
   }
 

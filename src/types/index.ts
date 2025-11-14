@@ -30,6 +30,17 @@ export interface Class {
   updatedAt: Date;
 }
 
+// Classroom: each student has their own classroom containing documents and notebooks
+export interface Classroom {
+  id: string;
+  studentId: string;
+  title?: string; // e.g., "Emma Johnson - Private Lessons"
+  documentIds?: string[];
+  notebookIds?: string[];
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 // Document types
 export interface Document {
   id: string;
@@ -40,6 +51,8 @@ export interface Document {
   uploadedBy: string;
   uploadedAt: Date;
   description?: string;
+  // Optional: link document to a specific student/classroom when instructor creates private materials
+  studentId?: string;
 }
 
 // Notebook types
@@ -51,6 +64,8 @@ export interface Notebook {
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
+  // Optional: notebook scoped to a particular student
+  studentId?: string;
 }
 
 // Student progress types
