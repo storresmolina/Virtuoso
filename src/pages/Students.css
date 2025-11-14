@@ -188,3 +188,48 @@
     width: 60px;
   }
 }
+
+/* Student page / classroom styles */
+.student-page {
+  padding: 1.25rem;
+}
+
+.classroom-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.classroom-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.classroom-grid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 16px;
+}
+
+.classroom-section {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.classroom-section h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.student-page .action-link {
+  margin-right: 8px;
+}
+
+@media (max-width: 900px) {
+  .classroom-grid {
+    grid-template-columns: 1fr;
+  }
+}

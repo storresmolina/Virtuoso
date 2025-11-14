@@ -1,0 +1,25 @@
+.notebooks {
+  padding: 12px;
+}
+
+.notebooks-header h2 {
+  margin: 0 0 6px 0;
+}
+
+.notebooks-container {
+  display: flex;
+  gap: 12px;
+}
+
+.notebooks-sidebar {
+  width: 260px;
+}
+
+.notebooks-editor {
+  flex: 1;
+}
+
+.create-btn {
+  display: block;
+  margin-bottom: 8px;
+}

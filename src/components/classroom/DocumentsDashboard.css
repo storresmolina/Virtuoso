@@ -1,0 +1,45 @@
+.documents-dashboard {
+  padding: 12px;
+}
+
+.documents-header h2 {
+  margin: 0 0 6px 0;
+}
+
+.upload-section {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0 18px 0;
+}
+
+.upload-box {
+  border: 1px dashed #ccc;
+  padding: 12px;
+  flex: 1;
+  text-align: center;
+}
+
+.upload-btn {
+  margin-top: 8px;
+}
+
+.filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 240px;
+}
+
+.documents-list .documents-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.documents-table th, .documents-table td {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.type-badge {
+  margin-right: 8px;
+}

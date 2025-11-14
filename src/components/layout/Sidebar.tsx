@@ -9,8 +9,6 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'documents', label: 'Documents', icon: '📄' },
-    { id: 'notebooks', label: 'Notebooks', icon: '📓' },
     { id: 'students', label: 'Students', icon: '👥' },
     { id: 'settings', label: 'Settings', icon: '⚙️' },
   ];
