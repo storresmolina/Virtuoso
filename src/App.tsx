@@ -4,7 +4,7 @@ import { Sidebar } from './components/layout/Sidebar'
 import { Dashboard } from './pages/Dashboard'
 import { Students } from './pages/Students'
 import { Settings } from './pages/Settings'
-import { StudentPage } from './pages/StudentPage'
+import { StudentLayout } from './components/classroom/StudentLayout'
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -18,7 +18,7 @@ function App() {
         return <Students onOpenStudent={(id: string) => { setSelectedStudentId(id); setActiveTab('student'); }} />
       case 'student':
         return selectedStudentId ? (
-          <StudentPage studentId={selectedStudentId} onBack={() => { setSelectedStudentId(null); setActiveTab('students'); }} />
+          <StudentLayout studentId={selectedStudentId} onBack={() => { setSelectedStudentId(null); setActiveTab('students'); }} />
         ) : (
           <Students onOpenStudent={(id: string) => { setSelectedStudentId(id); setActiveTab('student'); }} />
         )
@@ -31,8 +31,8 @@ function App() {
 
   return (
     <div className="app-container">
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
-      <main className="main-content">
+      {activeTab !== 'student' && <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />}
+      <main className={`main-content ${activeTab === 'student' ? 'full-width' : ''}`}>
         {renderContent()}
       </main>
     </div>
