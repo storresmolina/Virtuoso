@@ -13,14 +13,65 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* LIGHT MODE PALETTE - Default */
+  --ivory: #FAF9F6;
+  --pressed-ivory: #F2F1EE;
+  --off-white-pressed: #EBE9E3;
+  --mocha: #a49564;
+  --lacquer: #7A6B63;
+  --graphite: #9E8B7E;
+  --silver: #C8C8C5;
+  --gradient: linear-gradient(0deg, #704200 90%, #341e00 10%);
+  
+  /* Semantic color tokens for Light Mode */
+  --bg-primary: var(--ivory);
+  --bg-secondary: var(--pressed-ivory);
+  --bg-tertiary: var(--off-white-pressed);
+  --text-primary: var(--lacquer);
+  --text-secondary: #666666;
+  --accent-primary: var(--mocha);
+  --accent-secondary: var(--silver);
+  --border-color: var(--off-white-pressed);
+  --button-bg: var(--pressed-ivory);
+  --button-text: var(--lacquer);
+  --button-hover: var(--mocha);
+}
+
+/* DARK MODE PALETTE */
+:root[data-theme="dark"] {
+  --ivory: #333333;
+  --pressed-ivory: #2a2a2a;
+  --off-white-pressed: #1f1f1f;
+  --mocha: #D4A574;
+  --lacquer: #FAF9F6;
+  --graphite: #656564;
+  --silver: #999999;
+  --gradient: linear-gradient(135deg, #656564, #333333);
+  
+  /* Semantic color tokens for Dark Mode */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2a2a2a;
+  --bg-tertiary: #3a3a3a;
+  --text-primary: #FAF9F6;
+  --text-secondary: #CCCCCC;
+  --accent-primary: #D4A574;
+  --accent-secondary: #999999;
+  --border-color: #3a3a3a;
+  --button-bg: #2a2a2a;
+  --button-text: #FAF9F6;
+  --button-hover: #D4A574;
+  
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #f5f7fa;
-  color: #333;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 html, body, #root {
@@ -40,6 +91,44 @@ a:hover {
 button {
   font-family: inherit;
   cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Global button tokens - prefers consistent, elegant styling */
+.primary-btn {
+  background: var(--accent-primary);
+  color: var(--lacquer);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.primary-btn:hover { 
+  background: color-mix(in srgb, var(--accent-primary) 85%, black 15%);
+}
+
+.btn-secondary {
+  background: var(--button-bg);
+  border: 1px solid var(--border-color);
+  color: var(--button-text);
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--bg-tertiary);
+}
+
+/* small utility for subtle action buttons */
+.action-small {
+  background: transparent;
+  border: 1px solid var(--accent-secondary);
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: var(--text-primary);
   transition: all 0.3s ease;
 }
 

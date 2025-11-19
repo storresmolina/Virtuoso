@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Students } from './pages/Students'
 import { Settings } from './pages/Settings'
 import { StudentLayout } from './components/classroom/StudentLayout'
+import { ThemeProvider } from './context/ThemeContext'
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -30,12 +31,14 @@ function App() {
   }
 
   return (
-    <div className="app-container">
-      {activeTab !== 'student' && <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />}
-      <main className={`main-content ${activeTab === 'student' ? 'full-width' : ''}`}>
-        {renderContent()}
-      </main>
-    </div>
+    <ThemeProvider>
+      <div className="app-container">
+        {activeTab !== 'student' && <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />}
+        <main className={`main-content ${activeTab === 'student' ? 'full-width' : ''}`}>
+          {renderContent()}
+        </main>
+      </div>
+    </ThemeProvider>
   )
 }
 

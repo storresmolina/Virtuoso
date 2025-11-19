@@ -1,5 +1,7 @@
 .students {
   padding: 2rem;
+  background: var(--bg-primary);
+  transition: background-color 0.3s ease;
 }
 
 .students-header {
@@ -9,12 +11,12 @@
 .students-header h2 {
   margin: 0 0 0.5rem 0;
   font-size: 2rem;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .students-header p {
   margin: 0;
-  color: #666;
+  color: var(--text-secondary);
   font-size: 1rem;
 }
 
@@ -28,10 +30,12 @@
 .filter-select,
 .search-input {
   padding: 0.75rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
   font-size: 0.95rem;
-  background: white;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
 }
 
 .filter-select {
@@ -41,8 +45,8 @@
 .filter-select:focus,
 .search-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 6px rgba(164,119,100,0.06);
 }
 
 .search-input {
@@ -51,10 +55,12 @@
 }
 
 .students-table-container {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow-x: auto;
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
 }
 
 .students-table {
@@ -63,25 +69,27 @@
 }
 
 .students-table thead {
-  background: #f8f9fa;
-  border-bottom: 2px solid #ddd;
+  background: var(--bg-tertiary);
+  border-bottom: 2px solid var(--border-color);
 }
 
 .students-table th {
   padding: 1rem;
   text-align: left;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   font-size: 0.9rem;
 }
 
 .students-table td {
   padding: 1rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
 }
 
 .students-table tbody tr:hover {
-  background: #f8f9fa;
+  background: var(--bg-tertiary);
 }
 
 .student-name {
@@ -96,7 +104,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--gradient);
   color: white;
   display: flex;
   align-items: center;
@@ -145,20 +153,20 @@
 
 .action-link {
   padding: 0.4rem 0.8rem;
-  background: #f0f1f5;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
-  color: #667eea;
+  color: var(--accent-primary);
   font-weight: 500;
   transition: all 0.3s ease;
 }
 
 .action-link:hover {
-  background: #667eea;
-  color: white;
-  border-color: #667eea;
+  background: var(--accent-primary);
+  color: var(--lacquer);
+  border-color: var(--accent-primary);
 }
 
 @media (max-width: 768px) {

@@ -1,5 +1,7 @@
 .schedule-container {
   padding: 0;
+  background: var(--bg-primary);
+  transition: background-color 0.3s ease;
 }
 
 @keyframes menuSlideIn {
@@ -22,28 +24,31 @@
 
 .schedule-header h2 {
   margin: 0;
+  color: var(--text-primary);
 }
 
 .add-event-btn {
-  background: #2563eb;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--lacquer);
   border: none;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .add-event-btn:hover {
-  background: #1d4ed8;
+  background: color-mix(in srgb, var(--accent-primary) 85%, black 15%);
 }
 
 .schedule-form {
-  background: #f9fafb;
-  border: 1px solid #e6e9ef;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
+  transition: all 0.3s ease;
 }
 
 .form-group {
@@ -55,17 +60,21 @@
   font-weight: 600;
   margin-bottom: 6px;
   font-size: 14px;
+  color: var(--text-primary);
 }
 
 .form-input,
 .form-textarea {
   width: 100%;
   padding: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   font-family: inherit;
   font-size: 14px;
   box-sizing: border-box;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
 }
 
 .form-textarea {
@@ -105,16 +114,18 @@
 }
 
 .btn-secondary {
-  background: white;
-  border: 1px solid #ddd;
+  background: var(--button-bg);
+  border: 1px solid var(--border-color);
   padding: 8px 12px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
+  color: var(--button-text);
+  transition: all 0.3s ease;
 }
 
 .btn-secondary:hover {
-  background: #f3f4f6;
+  background: var(--bg-tertiary);
 }
 
 .documents-selector {
@@ -129,18 +140,20 @@
   align-items: center;
   gap: 6px;
   padding: 8px;
-  background: white;
-  border: 1px solid #ddd;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .doc-checkbox input[type="checkbox"] {
   cursor: pointer;
+  accent-color: var(--accent-primary);
 }
 
 .doc-checkbox:hover {
-  background: #f9fafb;
+  background: var(--bg-secondary);
 }
 
 .form-actions {
@@ -150,17 +163,18 @@
 }
 
 .form-actions .primary-btn {
-  background: #2563eb;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--lacquer);
   border: none;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .form-actions .primary-btn:hover {
-  background: #1d4ed8;
+  background: color-mix(in srgb, var(--accent-primary) 85%, black 15%);
 }
 
 .schedule-list {
@@ -171,7 +185,7 @@
 
 .empty-state {
   text-align: center;
-  color: #999;
+  color: var(--text-secondary);
   padding: 32px 16px;
   font-size: 14px;
 }
@@ -180,21 +194,21 @@
   display: flex;
   gap: 1rem;
   padding: 1rem;
-  background: #f8f9fa;
-  border-left: 4px solid #667eea;
+  background: var(--bg-secondary);
+  border-left: 4px solid var(--accent-primary);
   border-radius: 6px;
   transition: all 0.3s ease;
   position: relative;
 }
 
 .schedule-card:hover {
-  background: #f0f1f5;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+  background: var(--bg-tertiary);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
 }
 
 .schedule-card.editing {
-  background: #f9fafb;
-  border: 1px solid #2563eb;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--accent-primary);
 }
 
 .schedule-header-row {
@@ -211,19 +225,21 @@
   gap: 0.5rem;
   min-width: 70px;
   padding: 0.5rem;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 4px;
   text-align: center;
+  transition: all 0.3s ease;
 }
 
 .date-label {
   font-size: 1.2rem;
+  color: var(--text-primary);
 }
 
 .date-value {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-secondary);
 }
 
 .schedule-actions {
@@ -243,26 +259,29 @@
   padding: 6px 8px;
   border-radius: 6px;
   cursor: pointer;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
 }
 
 .menu-toggle:hover {
-  background: #f3f4f6;
+  background: var(--bg-tertiary);
 }
 
 .menu-dropdown {
   position: absolute;
   top: 36px;
   right: 0;
-  background: white;
-  border: 1px solid #e6e9ef;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  box-shadow: 0 6px 20px rgba(16,24,40,0.08);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
   min-width: 140px;
   overflow: hidden;
   animation: menuSlideIn 0.15s ease-out;
   transform-origin: top right;
+  transition: all 0.3s ease;
 }
 
 .menu-item {
@@ -272,10 +291,12 @@
   text-align: left;
   cursor: pointer;
   font-size: 14px;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
 }
 
 .menu-item:hover {
-  background: #f9fafb;
+  background: var(--bg-tertiary);
 }
 
 .menu-item.delete {
@@ -284,15 +305,17 @@
 
 .action-small {
   background: transparent;
-  border: 1px solid #eee;
+  border: 1px solid var(--accent-secondary);
   padding: 6px 8px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
 }
 
 .action-small:hover {
-  background: #f9fafb;
+  background: var(--bg-tertiary);
 }
 
 .action-small.delete {
@@ -300,18 +323,18 @@
 }
 
 .action-small.delete:hover {
-  background: #fee2e2;
+  background: rgba(252, 165, 165, 0.1);
 }
 
 .schedule-content h4 {
   margin: 0 0 0.5rem 0;
-  color: #333;
+  color: var(--text-primary);
   font-size: 1rem;
 }
 
 .schedule-notes {
   margin: 0 0 8px 0;
-  color: #666;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
@@ -324,7 +347,7 @@
   font-weight: 600;
   font-size: 13px;
   margin-bottom: 6px;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .schedule-bullets ul {
@@ -336,13 +359,13 @@
 .schedule-bullets li {
   margin: 4px 0;
   font-size: 14px;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .schedule-documents {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-color);
 }
 
 .documents-label {
@@ -350,7 +373,7 @@
   font-weight: 600;
   font-size: 13px;
   margin-bottom: 6px;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .schedule-documents ul {
@@ -362,7 +385,7 @@
 .schedule-documents li {
   margin: 4px 0;
   font-size: 14px;
-  color: #2563eb;
+  color: var(--accent-primary);
   text-decoration: none;
 }
 

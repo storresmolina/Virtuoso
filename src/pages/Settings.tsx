@@ -1,7 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import './Settings.css';
 
 export const Settings: React.FC = () => {
+  const { theme, setTheme } = useTheme();
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [weeklyDigestEnabled, setWeeklyDigestEnabled] = useState(true);
+
+  const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setTheme(e.target.value as 'light' | 'dark');
+  };
+
   return (
     <div className="settings">
       <div className="settings-header">
@@ -31,20 +40,33 @@ export const Settings: React.FC = () => {
           <h3>Preferences</h3>
           <div className="setting-item">
             <label>
-              <input type="checkbox" defaultChecked /> Email notifications
+              <input 
+                type="checkbox" 
+                checked={notificationsEnabled}
+                onChange={(e) => setNotificationsEnabled(e.target.checked)}
+              /> 
+              Email notifications
             </label>
           </div>
           <div className="setting-item">
             <label>
-              <input type="checkbox" defaultChecked /> Weekly digest
+              <input 
+                type="checkbox" 
+                checked={weeklyDigestEnabled}
+                onChange={(e) => setWeeklyDigestEnabled(e.target.checked)}
+              /> 
+              Weekly digest
             </label>
           </div>
           <div className="setting-item">
-            <label>Dark mode</label>
-            <select>
-              <option>Light</option>
-              <option>Dark</option>
-              <option>Auto</option>
+            <label htmlFor="theme-select">Color Palette</label>
+            <select 
+              id="theme-select"
+              value={theme}
+              onChange={handleThemeChange}
+            >
+              <option value="light">Light Mode</option>
+              <option value="dark">Dark Mode</option>
             </select>
           </div>
           <button className="save-btn">Save Preferences</button>
