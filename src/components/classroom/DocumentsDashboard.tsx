@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './DocumentsDashboard.css';
 
 interface DocumentFile {
@@ -16,7 +16,7 @@ interface DocumentFile {
 }
 
 // Accept optional studentId to show documents scoped to a student's classroom
-export const DocumentsDashboard: React.FC<{ studentId?: string }> = ({ studentId }) => {
+export const DocumentsDashboard: React.FC<{ studentId?: string; onDocumentsChange?: (docs: any[]) => void }> = ({ studentId, onDocumentsChange }) => {
   const [documents, setDocuments] = useState<DocumentFile[]>([
     { id: '1', name: 'Chopin_Nocturne_Op9_No2.pdf', title: 'Chopin Nocturne Op.9 No.2', type: 'sheet_music', uploadDate: '2024-11-10', size: '2.4 MB', studentId: '1', visible: true },
     { id: '2', name: 'Finger_Exercises.pdf', title: 'Finger Exercises', type: 'reference', uploadDate: '2024-11-08', size: '1.8 MB', studentId: '2', visible: true },
@@ -29,6 +29,14 @@ export const DocumentsDashboard: React.FC<{ studentId?: string }> = ({ studentId
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<{ title?: string; comments?: string }>({});
   const createdUrlsRef = useRef<string[]>([]);
+
+  // Notify parent when documents change
+  useEffect(() => {
+    if (onDocumentsChange) {
+      const filtered = documents.filter(d => !studentId || d.studentId === studentId);
+      onDocumentsChange(filtered.map(d => ({ id: d.id, name: d.name, title: d.title })));
+    }
+  }, [documents, studentId, onDocumentsChange]);
 
   const openFilePicker = () => fileInputRef.current?.click();
 
@@ -171,12 +179,14 @@ export const DocumentsDashboard: React.FC<{ studentId?: string }> = ({ studentId
                 <div className="doc-sub">{doc.uploadDate} • {doc.size}</div>
               </div>
 
-              <div className="card-actions">
-                <button className="action-small" title="Download">📥</button>
-                <button className="action-small" onClick={() => toggleVisibility(doc.id)} title="Toggle visibility">{doc.visible ? '👁️' : '🚫'}</button>
-                <button className="action-small" onClick={() => startEdit(doc)} title="Edit">✏️</button>
-                <button className="action-small delete" onClick={() => deleteDocument(doc.id)} title="Delete">🗑️</button>
-              </div>
+              {editingId === doc.id ? null : (
+                <div className="card-actions">
+                  <button className="action-small" title="Download">📥</button>
+                  <button className="action-small" onClick={() => toggleVisibility(doc.id)} title="Toggle visibility">{doc.visible ? '👁️' : '🚫'}</button>
+                  <button className="action-small" onClick={() => startEdit(doc)} title="Edit">✏️</button>
+                  <button className="action-small delete" onClick={() => deleteDocument(doc.id)} title="Delete">🗑️</button>
+                </div>
+              )}
 
               {editingId === doc.id && (
                 <div className="card-edit">

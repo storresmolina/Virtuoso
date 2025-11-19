@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './StudentLayout.css';
 import { getStudentById } from '../../data/students';
 import { DocumentsDashboard } from './DocumentsDashboard';
@@ -12,9 +12,16 @@ interface StudentLayoutProps {
 
 type SectionType = 'documents' | 'schedule' | 'notebooks';
 
+interface DocumentFile {
+  id: string;
+  name: string;
+  title?: string;
+}
+
 export const StudentLayout: React.FC<StudentLayoutProps> = ({ studentId, onBack }) => {
   const student = getStudentById(studentId);
-  const [activeSection, setActiveSection] = React.useState<SectionType>('documents');
+  const [activeSection, setActiveSection] = useState<SectionType>('documents');
+  const [documents, setDocuments] = useState<DocumentFile[]>([]);
 
   if (!student) {
     return (
@@ -72,7 +79,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ studentId, onBack 
             <div className="section-container">
               {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
               {/* @ts-ignore */}
-              <DocumentsDashboard studentId={student.id} />
+              <DocumentsDashboard studentId={student.id} onDocumentsChange={setDocuments} />
             </div>
           )}
 
@@ -80,7 +87,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ studentId, onBack 
             <div className="section-container">
               {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
               {/* @ts-ignore */}
-              <Schedule studentId={student.id} />
+              <Schedule studentId={student.id} availableDocuments={documents} />
             </div>
           )}
 

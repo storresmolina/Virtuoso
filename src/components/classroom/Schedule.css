@@ -1,0 +1,405 @@
+.schedule-container {
+  padding: 0;
+}
+
+@keyframes menuSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.schedule-header h2 {
+  margin: 0;
+}
+
+.add-event-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.add-event-btn:hover {
+  background: #1d4ed8;
+}
+
+.schedule-form {
+  background: #f9fafb;
+  border: 1px solid #e6e9ef;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.form-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.bullets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.bullet-item {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.bullet-item .form-input {
+  flex: 1;
+}
+
+.btn-remove {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-remove:hover {
+  background: #fecaca;
+}
+
+.btn-secondary {
+  background: white;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-secondary:hover {
+  background: #f3f4f6;
+}
+
+.documents-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.doc-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.doc-checkbox input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.doc-checkbox:hover {
+  background: #f9fafb;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.form-actions .primary-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.form-actions .primary-btn:hover {
+  background: #1d4ed8;
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empty-state {
+  text-align: center;
+  color: #999;
+  padding: 32px 16px;
+  font-size: 14px;
+}
+
+.schedule-card {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-left: 4px solid #667eea;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.schedule-card:hover {
+  background: #f0f1f5;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.schedule-card.editing {
+  background: #f9fafb;
+  border: 1px solid #2563eb;
+}
+
+.schedule-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.schedule-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 70px;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.date-label {
+  font-size: 1.2rem;
+}
+
+.date-value {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.schedule-actions {
+  display: flex;
+  gap: 6px;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+}
+
+.menu-toggle {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.menu-toggle:hover {
+  background: #f3f4f6;
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: 36px;
+  right: 0;
+  background: white;
+  border: 1px solid #e6e9ef;
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(16,24,40,0.08);
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  overflow: hidden;
+  animation: menuSlideIn 0.15s ease-out;
+  transform-origin: top right;
+}
+
+.menu-item {
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.menu-item:hover {
+  background: #f9fafb;
+}
+
+.menu-item.delete {
+  color: #c0392b;
+}
+
+.action-small {
+  background: transparent;
+  border: 1px solid #eee;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.action-small:hover {
+  background: #f9fafb;
+}
+
+.action-small.delete {
+  border-color: #fca5a5;
+}
+
+.action-small.delete:hover {
+  background: #fee2e2;
+}
+
+.schedule-content h4 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1rem;
+}
+
+.schedule-notes {
+  margin: 0 0 8px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.schedule-bullets {
+  margin: 8px 0;
+}
+
+.bullets-label {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: #333;
+}
+
+.schedule-bullets ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style-type: disc;
+}
+
+.schedule-bullets li {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #555;
+}
+
+.schedule-documents {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+}
+
+.documents-label {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: #333;
+}
+
+.schedule-documents ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style-type: none;
+}
+
+.schedule-documents li {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.schedule-documents li::before {
+  content: "📄 ";
+  margin-right: 4px;
+}
+
+.schedule-edit-form {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .schedule-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .add-event-btn {
+    width: 100%;
+  }
+
+  .documents-selector {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
+  /* On small screens, keep menu inline to avoid absolute overflow */
+  .schedule-actions {
+    position: static;
+    justify-content: flex-end;
+  }
+
+  .menu-dropdown {
+    position: static;
+    box-shadow: none;
+    border: 1px solid #eee;
+    margin-top: 6px;
+  }
+}
