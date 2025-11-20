@@ -27,7 +27,7 @@ function App() {
         return <Settings />
       default:
         return <Dashboard onOpenStudent={(id: string) => { setSelectedStudentId(id); setActiveTab('student'); }} />
-    }
+      }
   }
 
   return (

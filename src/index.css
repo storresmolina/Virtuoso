@@ -22,7 +22,7 @@
   --lacquer: #7A6B63;
   --graphite: #9E8B7E;
   --silver: #C8C8C5;
-  --gradient: linear-gradient(0deg, #704200 90%, #341e00 10%);
+  --gradient: linear-gradient(180deg, #B8956F 0%, #B8956F 85%, #A78560 100%);
   
   /* Semantic color tokens for Light Mode */
   --bg-primary: var(--ivory);

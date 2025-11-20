@@ -95,7 +95,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ studentId, onBack 
             <div className="section-container">
               {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
               {/* @ts-ignore */}
-              <Notebooks studentId={student.id} />
+              <Notebooks studentId={student.id} availableDocuments={documents} />
             </div>
           )}
         </div>
