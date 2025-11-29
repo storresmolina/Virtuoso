@@ -1,12 +1,30 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useView } from '../context/ViewContext'
 
 export const InstructorDashboard: React.FC = () => {
   const { user, listCodes, createCode, listStudents } = useAuth()
   const { openStudent } = useView()
-  const codes = listCodes()
-  const students = listStudents()
+  const [codes, setCodes] = useState<any[]>([])
+  const [students, setStudents] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      setLoading(true)
+      try {
+        const [cRows, sRows] = await Promise.all([listCodes(), listStudents()])
+        if (!cancelled) {
+          setCodes(cRows)
+          setStudents(sRows)
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [listCodes, listStudents])
 
   const make = () => {
     const c = createCode()
@@ -38,11 +56,13 @@ export const InstructorDashboard: React.FC = () => {
       </div>
       <section style={{marginTop:18}}>
         <h3>Active Codes</h3>
-        <ul>
-          {codes.map((c: any) => (
-            <li key={c.code}><code>{c.code}</code> — {c.used ? 'used' : 'available'}</li>
-          ))}
-        </ul>
+        {loading && codes.length === 0 ? <div>Loading codes...</div> : (
+          <ul>
+            {codes.map((c: any) => (
+              <li key={c.code}><code>{c.code}</code> — {c.used ? 'used' : 'available'}</li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section style={{marginTop:18}}>
@@ -58,7 +78,9 @@ export const InstructorDashboard: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {students.map((s: any) => (
+            {loading && students.length === 0 ? (
+              <tr><td colSpan={4} style={{padding:12}}>Loading students...</td></tr>
+            ) : students.map((s: any) => (
               <tr key={s.id} style={{borderBottom:'1px solid #f3f3f3'}}>
                 <td style={{padding:'8px'}}>{s.username}</td>
                 <td style={{padding:'8px'}}>{s.name || '-'}</td>
