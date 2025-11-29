@@ -74,6 +74,7 @@ export const Notebooks: React.FC<NotebooksProps> = ({
     strike: false
   });
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     // adjust textarea height when editing starts or content changes
@@ -205,7 +206,7 @@ export const Notebooks: React.FC<NotebooksProps> = ({
     };
 
     if (start === end) {
-      // No selection: insert empty markers and place cursor between them
+      // No selection: if caret is between matching markers, remove them; otherwise insert empty markers
       if (format === 'underline') {
         const insertion = '<u></u>';
         const pos = start + 3; // between <u>|</u>
@@ -214,6 +215,19 @@ export const Notebooks: React.FC<NotebooksProps> = ({
         return;
       }
       const marker = markers[format];
+      const markerLen = marker.length;
+      const before = value.slice(Math.max(0, start - markerLen), start);
+      const after = value.slice(start, Math.min(value.length, start + markerLen));
+
+      // If caret is already between a pair of markers, remove them instead of inserting more
+      if (before === marker && after === marker) {
+        const newValue = value.slice(0, start - markerLen) + value.slice(start + markerLen);
+        applyChange(newValue, start - markerLen, start - markerLen);
+        setTextFormat(prev => ({ ...prev, [format]: false }));
+        return;
+      }
+
+      // Insert markers
       const insertion = marker + marker;
       const pos = start + marker.length;
       applyChange(value.slice(0, start) + insertion + value.slice(end), pos, pos);
@@ -236,11 +250,28 @@ export const Notebooks: React.FC<NotebooksProps> = ({
     }
 
     const marker = markers[format];
+    const markerLen = marker.length;
+
+    // If the selected text itself is already wrapped with the marker, unwrap it
     if (selected.startsWith(marker) && selected.endsWith(marker)) {
-      const unwrapped = selected.slice(marker.length, selected.length - marker.length);
+      const unwrapped = selected.slice(markerLen, selected.length - markerLen);
       applyChange(value.slice(0, start) + unwrapped + value.slice(end), start, start + unwrapped.length);
       setTextFormat(prev => ({ ...prev, [format]: false }));
+      return;
+    }
+
+    // Check if formatting markers surround the selection (outside the selection boundaries)
+    const beforeStart = value.slice(Math.max(0, start - markerLen), start);
+    const afterEnd = value.slice(end, Math.min(value.length, end + markerLen));
+    const isWrapped = beforeStart.endsWith(marker) && afterEnd.startsWith(marker);
+
+    if (isWrapped) {
+      // Remove surrounding markers
+      const newValue = value.slice(0, start - markerLen) + selected + value.slice(end + markerLen);
+      applyChange(newValue, start - markerLen, start - markerLen + selected.length);
+      setTextFormat(prev => ({ ...prev, [format]: false }));
     } else {
+      // Add markers around selection
       const wrapped = marker + selected + marker;
       applyChange(value.slice(0, start) + wrapped + value.slice(end), start, start + wrapped.length);
       setTextFormat(prev => ({ ...prev, [format]: true }));
@@ -274,6 +305,41 @@ export const Notebooks: React.FC<NotebooksProps> = ({
     out = out.replace(/\n/g, '<br/>');
     return out;
   };
+
+  // Convert an HTML string from contentEditable back into our simple markup
+  const htmlToMarkup = (html: string) => {
+    if (!html) return '';
+    // Replace <br> with newline placeholders
+    let out = html.replace(/<br\s*\/?>(\s*\n)?/gi, '\n');
+    // Handle strong, em, del, u tags
+    out = out.replace(/<strong>([\s\S]*?)<\/strong>/gi, '**$1**');
+    out = out.replace(/<b>([\s\S]*?)<\/b>/gi, '**$1**');
+    out = out.replace(/<em>([\s\S]*?)<\/em>/gi, '*$1*');
+    out = out.replace(/<i>([\s\S]*?)<\/i>/gi, '*$1*');
+    out = out.replace(/<del>([\s\S]*?)<\/del>/gi, '~~$1~~');
+    out = out.replace(/<u>([\s\S]*?)<\/u>/gi, '<u>$1<\/u>');
+    // Strip any other tags (keep text)
+    out = out.replace(/<[^>]+>/g, '');
+    // Convert HTML entities
+    out = out.replace(/&nbsp;/g, ' ');
+    out = out.replace(/&amp;/g, '&');
+    out = out.replace(/&lt;/g, '<');
+    out = out.replace(/&gt;/g, '>');
+    out = out.replace(/&quot;/g, '"');
+    out = out.replace(/&#39;/g, "'");
+    return out;
+  };
+
+  // Keep contentEditable in sync with editContent (rendered HTML)
+  useEffect(() => {
+    if (isEditing && contentRef.current) {
+      const html = renderFormatted(editContent || selectedNotebook?.content);
+      // Only update if different to avoid resetting caret unnecessarily
+      if (contentRef.current.innerHTML !== html) {
+        contentRef.current.innerHTML = html;
+      }
+    }
+  }, [isEditing, editContent, selectedNotebook]);
 
   return (
     <div className="notebooks">
@@ -366,7 +432,7 @@ export const Notebooks: React.FC<NotebooksProps> = ({
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => toggleFormat('bold')}
                           className={`format-btn ${textFormat.bold ? 'active' : ''}`}
-                          title="Bold"
+                          title="Bold (Ctrl+B)"
                         >
                           <strong>B</strong>
                         </button>
@@ -374,7 +440,7 @@ export const Notebooks: React.FC<NotebooksProps> = ({
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => toggleFormat('italic')}
                           className={`format-btn ${textFormat.italic ? 'active' : ''}`}
-                          title="Italic"
+                          title="Italic (Ctrl+I)"
                         >
                           <em>I</em>
                         </button>
@@ -382,7 +448,7 @@ export const Notebooks: React.FC<NotebooksProps> = ({
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => toggleFormat('underline')}
                           className={`format-btn ${textFormat.underline ? 'active' : ''}`}
-                          title="Underline"
+                          title="Underline (Ctrl+U)"
                         >
                           <u>U</u>
                         </button>
@@ -390,7 +456,7 @@ export const Notebooks: React.FC<NotebooksProps> = ({
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => toggleFormat('strike')}
                           className={`format-btn ${textFormat.strike ? 'active' : ''}`}
-                          title="Strikethrough"
+                          title="Strikethrough (Ctrl+S)"
                         >
                           <s>S</s>
                         </button>
@@ -399,29 +465,36 @@ export const Notebooks: React.FC<NotebooksProps> = ({
               )}
 
               {isEditing ? (
-                <>
-                  <textarea
-                    ref={(el) => { textareaRef.current = el; }}
-                    className="notebook-editor-textarea"
-                    value={editContent}
-                    onChange={(e) => {
-                      setEditContent(e.target.value);
-                      // adjust height as user types
-                      if (textareaRef.current) {
-                        textareaRef.current.style.height = 'auto';
-                        textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+                <div
+                  ref={(el) => { contentRef.current = el; }}
+                  className="notebook-editor-contenteditable"
+                  contentEditable
+                  suppressContentEditableWarning
+                  onInput={(e) => {
+                    const html = (e.target as HTMLDivElement).innerHTML;
+                    const markup = htmlToMarkup(html);
+                    setEditContent(markup);
+                  }}
+                  onKeyDown={(e) => {
+                    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+                    const modKey = isMac ? e.metaKey : e.ctrlKey;
+                    if (modKey) {
+                      if (e.key === 'b' || e.key === 'B') {
+                        e.preventDefault();
+                        toggleFormat('bold');
+                      } else if (e.key === 'i' || e.key === 'I') {
+                        e.preventDefault();
+                        toggleFormat('italic');
+                      } else if (e.key === 'u' || e.key === 'U') {
+                        e.preventDefault();
+                        toggleFormat('underline');
+                      } else if (e.key === 's' || e.key === 'S') {
+                        e.preventDefault();
+                        toggleFormat('strike');
                       }
-                    }}
-                    placeholder="Start typing your class notes..."
-                  />
-
-                  <div className="notebook-live-preview">
-                    <div
-                      className="notebook-preview-inner"
-                      dangerouslySetInnerHTML={{ __html: renderFormatted(editContent || selectedNotebook?.content) }}
-                    />
-                  </div>
-                </>
+                    }
+                  }}
+                />
               ) : (
                 <div className="notebook-preview" aria-live="polite" dangerouslySetInnerHTML={{ __html: renderFormatted(editContent || selectedNotebook?.content) }} />
               )}
@@ -526,4 +599,6 @@ export const Notebooks: React.FC<NotebooksProps> = ({
     </div>
   );
 };
+
+
 

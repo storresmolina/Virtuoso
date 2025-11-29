@@ -305,6 +305,21 @@
   white-space: pre-wrap;
 }
 
+.notebook-editor-contenteditable {
+  padding: 1.5rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  min-height: 120px;
+  outline: none;
+  border: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  caret-color: var(--text-primary);
+}
+
 .notebook-editor-textarea:focus {
   outline: none;
 }

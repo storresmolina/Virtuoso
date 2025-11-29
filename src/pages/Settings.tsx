@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../auth/AuthContext'
 import './Settings.css';
 
 export const Settings: React.FC = () => {
@@ -10,6 +11,19 @@ export const Settings: React.FC = () => {
   const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setTheme(e.target.value as 'light' | 'dark');
   };
+
+  const { createCode, listCodes, logout } = useAuth()
+  const [codes, setCodes] = useState<any[]>(() => listCodes())
+
+  const makeCode = () => {
+    const c = createCode()
+    try {
+      navigator.clipboard?.writeText(c.code)
+    } catch {}
+    // refresh list
+    setCodes(listCodes())
+    alert('Created code: ' + c.code + ' (copied to clipboard)')
+  }
 
   return (
     <div className="settings">
@@ -75,7 +89,24 @@ export const Settings: React.FC = () => {
         <div className="settings-section">
           <h3>Security</h3>
           <button className="change-password-btn">Change Password</button>
-          <button className="logout-btn">Logout</button>
+          <button className="logout-btn" onClick={() => logout()}>Logout</button>
+        </div>
+        
+        <div className="settings-section">
+          <h3>Classroom Codes</h3>
+          <p>Create one-use classroom codes that students can use to register.</p>
+          <div style={{display:'flex',gap:8,alignItems:'center',marginTop:8}}>
+            <button className="primary-btn" onClick={makeCode}>Create Code</button>
+            <small style={{color:'#666'}}>New codes are copied to clipboard automatically.</small>
+          </div>
+          <ul style={{marginTop:12}}>
+            {codes.map((c: any) => (
+              <li key={c.code} style={{marginBottom:6}}>
+                <code style={{marginRight:8}}>{c.code}</code>
+                <span style={{color:'#666'}}>{c.used ? 'used' : 'available'}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>

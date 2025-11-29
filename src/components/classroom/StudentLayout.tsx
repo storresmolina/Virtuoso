@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './StudentLayout.css';
 import { getStudentById } from '../../data/students';
+import { mockAuth } from '../../auth/mockAuth';
 import { DocumentsDashboard } from './DocumentsDashboard';
 import { Notebooks } from './Notebooks';
 import { Schedule } from './Schedule';
@@ -20,10 +21,33 @@ interface DocumentFile {
 
 export const StudentLayout: React.FC<StudentLayoutProps> = ({ studentId, onBack }) => {
   const student = getStudentById(studentId);
+  // If not found in the demo students list, try the mockAuth users (registered/in-memory students)
+  const studentFromAuth = !student ? ((): any => {
+    try {
+      const found = mockAuth.listStudents().find((u: any) => u.id === studentId)
+      if (!found) return null
+      // map to StudentRecord shape expected by this layout
+      return {
+        id: found.id,
+        name: found.name || found.username,
+        className: 'Demo Class',
+        classShort: 'Demo',
+        enrollmentDate: (new Date()).toISOString().slice(0,10),
+        status: 'active',
+        completedAssignments: 0,
+        totalAssignments: 0,
+        lastActive: 'just now'
+      }
+    } catch {
+      return null
+    }
+  })() : null
+
+  const effectiveStudent = student || studentFromAuth
   const [activeSection, setActiveSection] = useState<SectionType>('documents');
   const [documents, setDocuments] = useState<DocumentFile[]>([]);
 
-  if (!student) {
+  if (!effectiveStudent) {
     return (
       <div className="student-page-container">
         <button className="action-link" onClick={onBack}>← Back</button>
@@ -42,9 +66,9 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ studentId, onBack 
     <div className="student-page-container">
       <div className="student-page-header">
         <button className="action-link" onClick={onBack}>← Back</button>
-        <div className="student-page-info">
-          <h2>{student.name}'s Classroom</h2>
-          <p>{student.className} • Enrolled: {student.enrollmentDate}</p>
+          <div className="student-page-info">
+          <h2>{effectiveStudent.name}'s Classroom</h2>
+          <p>{effectiveStudent.className} • Enrolled: {effectiveStudent.enrollmentDate}</p>
         </div>
       </div>
 
@@ -52,10 +76,10 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ studentId, onBack 
         {/* Left Sidebar Navigation */}
         <div className="student-page-sidebar">
           <div className="student-card-compact">
-            <div className="student-avatar-large">{student.name.charAt(0)}</div>
+            <div className="student-avatar-large">{effectiveStudent.name.charAt(0)}</div>
             <div className="student-info-compact">
-              <h3>{student.name}</h3>
-              <p>{student.classShort || student.className}</p>
+              <h3>{effectiveStudent.name}</h3>
+              <p>{effectiveStudent.classShort || effectiveStudent.className}</p>
             </div>
           </div>
 
@@ -79,7 +103,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ studentId, onBack 
             <div className="section-container">
               {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
               {/* @ts-ignore */}
-              <DocumentsDashboard studentId={student.id} onDocumentsChange={setDocuments} />
+              <DocumentsDashboard studentId={effectiveStudent.id} onDocumentsChange={setDocuments} />
             </div>
           )}
 
@@ -87,7 +111,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ studentId, onBack 
             <div className="section-container">
               {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
               {/* @ts-ignore */}
-              <Schedule studentId={student.id} availableDocuments={documents} />
+              <Schedule studentId={effectiveStudent.id} availableDocuments={documents} />
             </div>
           )}
 
@@ -95,7 +119,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ studentId, onBack 
             <div className="section-container">
               {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
               {/* @ts-ignore */}
-              <Notebooks studentId={student.id} availableDocuments={documents} />
+              <Notebooks studentId={effectiveStudent.id} availableDocuments={documents} />
             </div>
           )}
         </div>
