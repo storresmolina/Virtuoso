@@ -1,8 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { mockAuth } from './mockAuth'
-import type { UserRecord } from './mockAuth'
 import { login as sbLogin, register as sbRegister, logout as sbLogout, getCurrentUser } from './supabaseAuth'
-import { createOneUseCode, listCodes as sbListCodes, listStudents as sbListStudents, markCodeUsed } from '../data/supabaseApi'
+import { 
+  createOneUseCode, 
+  listCodes as sbListCodes, 
+  joinClassroomByCode,
+  createClassroom,
+  listClassrooms as sbListClassrooms,
+  getClassroomMembers,
+  getTier
+} from '../data/supabaseApi'
 import { supabase } from '../lib/supabase'
 
 // Unified user shape for the app UI
@@ -20,9 +27,12 @@ interface AuthContextValue {
   logout: () => Promise<void>
   register: (identifier: string, password: string, username: string, role: 'student' | 'instructor') => Promise<{ ok: boolean; error?: string }>
   joinClassroom: (code: string) => Promise<{ ok: boolean; error?: string }>
-  createCode: () => Promise<{ code: string }>
-  listCodes: () => Promise<any[]>
-  listStudents: () => Promise<any[]>
+  createClassroom: (name: string) => Promise<{ ok: boolean; classroomId?: string; error?: string }>
+  createCode: (classroomId: string) => Promise<{ code: string; error?: string }>
+  listClassrooms: () => Promise<any[]>
+  listCodes: (classroomId?: string) => Promise<any[]>
+  listClassroomMembers: (classroomId: string) => Promise<any[]>
+  getTierInfo: () => Promise<any>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -108,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } else {
       // Mock fallback
-      const res = mockAuth.registerStudentWithCode(identifier, password, username, '', role)
+      const res = mockAuth.registerStudentWithCode(identifier, password, username, '')
       if ((res as any).error) return { ok: false, error: (res as any).error }
       const mu = (res as any).user
       setUser({ id: mu.id, username: mu.username, name: mu.name, role })
@@ -120,57 +130,87 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return { ok: false, error: 'not_logged_in' }
     if (USE_SUPABASE) {
       try {
-        const codes = await sbListCodes()
-        const found = codes.find(c => c.code === code && !c.used)
-        if (!found) return { ok: false, error: 'invalid_or_used_code' }
-        await markCodeUsed(code)
-        const { error } = await supabase
-          .from('profiles')
-          .update({ classroom_code: code })
-          .eq('id', user.id)
-        if (error) throw error
-        setUser({ ...user, role: 'student' }) // refresh user state
+        await joinClassroomByCode(user.id, code)
         return { ok: true }
       } catch (e: any) {
-        return { ok: false, error: e.message || 'join_failed' }
+        const msg = e.message || 'join_failed'
+        if (msg === 'classroom_full') return { ok: false, error: 'This classroom is full. Instructor needs to upgrade.' }
+        return { ok: false, error: msg }
       }
     } else {
-      // Mock fallback
       return { ok: true }
     }
   }
 
-  const createCode = async () => {
+  const createClassroomFn = async (name: string) => {
+    if (!user) return { ok: false, error: 'not_logged_in' }
     if (USE_SUPABASE) {
       try {
-        const codeRow = await createOneUseCode()
+        const classroom = await createClassroom(user.id, name)
+        return { ok: true, classroomId: classroom.id }
+      } catch (e: any) {
+        return { ok: false, error: e.message || 'create_failed' }
+      }
+    }
+    return { ok: true, classroomId: 'mock-classroom' }
+  }
+
+  const createCodeFn = async (classroomId: string) => {
+    if (USE_SUPABASE) {
+      try {
+        const codeRow = await createOneUseCode(classroomId)
         return { code: codeRow.code }
       } catch (e: any) {
-        return { code: 'ERROR:' + (e.message || 'failed') }
+        return { code: '', error: e.message || 'failed' }
       }
     }
     return mockAuth.createOneUseCode()
   }
 
-  const listCodes = async () => {
+  const listClassroomsFn = async () => {
+    if (!user) return []
     if (USE_SUPABASE) {
-      try { return await sbListCodes() } catch { return [] }
+      try { return await sbListClassrooms(user.id) } catch { return [] }
+    }
+    return []
+  }
+
+  const listCodesFn = async (classroomId?: string) => {
+    if (USE_SUPABASE) {
+      try { return await sbListCodes(classroomId) } catch { return [] }
     }
     return mockAuth.listCodes()
   }
 
-  const listStudents = async () => {
+  const listClassroomMembersFn = async (classroomId: string) => {
     if (USE_SUPABASE) {
-      try {
-        const rows = await sbListStudents()
-        return rows.map(r => ({ id: r.id, username: r.email || r.id.slice(0,8), name: r.name }))
-      } catch { return [] }
+      try { return await getClassroomMembers(classroomId) } catch { return [] }
     }
-    return mockAuth.listStudents().map((s: any) => ({ id: s.id, username: s.username, name: s.name }))
+    return []
+  }
+
+  const getTierInfoFn = async () => {
+    if (!user) return null
+    if (USE_SUPABASE) {
+      try { return await getTier(user.id) } catch { return null }
+    }
+    return { id: 'free', name: 'Free', max_students: 1, ai_analysis_enabled: false, price_monthly: 0 }
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register, joinClassroom, createCode, listCodes, listStudents }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      logout, 
+      register, 
+      joinClassroom, 
+      createClassroom: createClassroomFn,
+      createCode: createCodeFn, 
+      listClassrooms: listClassroomsFn,
+      listCodes: listCodesFn, 
+      listClassroomMembers: listClassroomMembersFn,
+      getTierInfo: getTierInfoFn
+    }}>
       {children}
     </AuthContext.Provider>
   )

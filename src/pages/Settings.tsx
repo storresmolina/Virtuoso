@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../auth/AuthContext'
 import './Settings.css';
@@ -12,16 +12,48 @@ export const Settings: React.FC = () => {
     setTheme(e.target.value as 'light' | 'dark');
   };
 
-  const { createCode, listCodes, logout } = useAuth()
-  const [codes, setCodes] = useState<any[]>(() => listCodes())
+  const { createCode, listCodes, listClassrooms, getTierInfo } = useAuth()
+  const [codes, setCodes] = useState<any[]>([])
+  const [classrooms, setClassrooms] = useState<any[]>([])
+  const [selectedClassroom, setSelectedClassroom] = useState<string | null>(null)
+  const [tier, setTier] = useState<any>(null)
 
-  const makeCode = () => {
-    const c = createCode()
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function load() {
+    const [cls, t] = await Promise.all([listClassrooms(), getTierInfo()])
+    setClassrooms(cls)
+    setTier(t)
+    if (cls.length > 0) {
+      setSelectedClassroom(cls[0].id)
+      const c = await listCodes(cls[0].id)
+      setCodes(c)
+    }
+  }
+
+  async function changeClassroom(id: string) {
+    setSelectedClassroom(id)
+    const c = await listCodes(id)
+    setCodes(c)
+  }
+
+  async function makeCode() {
+    if (!selectedClassroom) {
+      alert('Create a classroom first from the Dashboard')
+      return
+    }
+    const c = await createCode(selectedClassroom)
+    if (c.error) {
+      alert('Error: ' + c.error)
+      return
+    }
     try {
       navigator.clipboard?.writeText(c.code)
     } catch {}
-    // refresh list
-    setCodes(listCodes())
+    await load()
+    if (selectedClassroom) await changeClassroom(selectedClassroom)
     alert('Created code: ' + c.code + ' (copied to clipboard)')
   }
 
@@ -86,16 +118,57 @@ export const Settings: React.FC = () => {
           <button className="save-btn">Save Preferences</button>
         </div>
 
+        {tier && (
+          <div className="settings-section">
+            <h3>Membership</h3>
+            <div style={{padding:12,background:'var(--bg-secondary)',borderRadius:8,marginBottom:12}}>
+              <strong>Current Plan:</strong> {tier.name}
+              {tier.max_students !== null && (
+                <div style={{marginTop:4,fontSize:14,color:'var(--text-secondary)'}}>
+                  {tier.max_students} {tier.max_students === 1 ? 'student' : 'students'} per classroom
+                </div>
+              )}
+              {tier.ai_analysis_enabled ? (
+                <div style={{marginTop:4,fontSize:14}}>✨ AI Practice Analysis Enabled</div>
+              ) : (
+                <div style={{marginTop:4,fontSize:14,color:'var(--text-secondary)'}}>
+                  AI analysis not available on free plan
+                </div>
+              )}
+            </div>
+            {tier.id === 'free' && (
+              <button className="primary-btn">
+                Upgrade to Premium ($29.99/month)
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="settings-section">
           <h3>Security</h3>
           <button className="change-password-btn">Change Password</button>
-          <button className="logout-btn" onClick={() => logout()}>Logout</button>
         </div>
         
         <div className="settings-section">
           <h3>Classroom Codes</h3>
-          <p>Create one-use classroom codes that students can use to register.</p>
-          <div style={{display:'flex',gap:8,alignItems:'center',marginTop:8}}>
+          <p>Create one-use classroom codes that students can use to join a classroom.</p>
+          
+          {classrooms.length > 0 && (
+            <div style={{marginTop:12}}>
+              <label>Select Classroom:</label>
+              <select 
+                value={selectedClassroom || ''} 
+                onChange={e => changeClassroom(e.target.value)}
+                style={{marginLeft:8,padding:'4px 8px'}}
+              >
+                {classrooms.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          
+          <div style={{display:'flex',gap:8,alignItems:'center',marginTop:12}}>
             <button className="primary-btn" onClick={makeCode}>Create Code</button>
             <small style={{color:'#666'}}>New codes are copied to clipboard automatically.</small>
           </div>
