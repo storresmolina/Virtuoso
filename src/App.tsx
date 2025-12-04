@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 import { Sidebar } from './components/layout/Sidebar'
 import { Dashboard } from './pages/Dashboard'
@@ -11,6 +11,8 @@ import { AuthProvider, useAuth } from './auth/AuthContext'
 import { Landing } from './pages/Landing'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
+import { ForgotPassword } from './pages/ForgotPassword'
+import { ResetPassword } from './pages/ResetPassword'
 import { InstructorDashboard } from './pages/InstructorDashboard'
 import { StudentDashboard } from './pages/StudentDashboard'
 
@@ -62,7 +64,15 @@ function InnerApp() {
 }
 
 function App() {
-  const [view, setView] = useState<'landing'|'login'|'register'>('landing')
+  const [view, setView] = useState<'landing'|'login'|'register'|'forgot-password'|'reset-password'>('landing')
+
+  // Check if URL has reset password token
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1))
+    if (hashParams.get('type') === 'recovery') {
+      setView('reset-password')
+    }
+  }, [])
 
   return (
     <AuthProvider>
@@ -78,12 +88,20 @@ function App() {
 
 function AuthProviderWrapper({ view, setView }: { view: string; setView: (v: any) => void }) {
   const { user } = useAuth()
+  
+  // Show reset password page even if user is logged in (for password recovery flow)
+  if (view === 'reset-password') {
+    return <ResetPassword />
+  }
+  
   if (!user) {
     switch (view) {
       case 'login':
-        return <Login onCancel={() => setView('landing')} />
+        return <Login onCancel={() => setView('landing')} onForgotPassword={() => setView('forgot-password')} />
       case 'register':
         return <Register onCancel={() => setView('landing')} />
+      case 'forgot-password':
+        return <ForgotPassword onBack={() => setView('login')} />
       default:
         return <Landing onStart={(m) => setView(m)} />
     }
