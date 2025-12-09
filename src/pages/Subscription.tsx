@@ -92,7 +92,7 @@ const plans: Plan[] = [
 ]
 
 export const Subscription: React.FC = () => {
-  const { user, getTierInfo } = useAuth()
+  const { getTierInfo } = useAuth()
   const [currentTier, setCurrentTier] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')

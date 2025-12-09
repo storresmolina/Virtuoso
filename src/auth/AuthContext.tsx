@@ -8,8 +8,7 @@ import {
   createClassroom,
   listClassrooms as sbListClassrooms,
   getClassroomMembers,
-  getTier,
-  getInstructorStudents
+  getTier
 } from '../data/supabaseApi'
 import { supabase } from '../lib/supabase'
 

@@ -3,7 +3,7 @@ import { useAuth } from '../auth/AuthContext'
 import { CreateClassroomModal } from '../components/shared/CreateClassroomModal'
 
 export const InstructorDashboard: React.FC = () => {
-  const { user, listClassrooms, createClassroom, listClassroomMembers, getTierInfo } = useAuth()
+  const { user, listClassrooms, createClassroom, getTierInfo } = useAuth()
   const [classrooms, setClassrooms] = useState<any[]>([])
   const [tier, setTier] = useState<any>(null)
   const [loading, setLoading] = useState(true)
