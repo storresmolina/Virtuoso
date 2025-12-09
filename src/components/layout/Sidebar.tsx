@@ -8,13 +8,15 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
+  const { user, logout } = useAuth()
+  
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'students', label: 'Students', icon: '👥' },
+    ...(user?.role === 'instructor' ? [{ id: 'subscription', label: 'Subscription', icon: '💳' }] : []),
     { id: 'settings', label: 'Settings', icon: '⚙️' },
   ];
 
-  const { user, logout } = useAuth()
   const [open, setOpen] = useState(false)
   const toggleRef = useRef<HTMLButtonElement | null>(null)
   const firstMenuRef = useRef<HTMLButtonElement | null>(null)

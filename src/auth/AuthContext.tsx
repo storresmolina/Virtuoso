@@ -8,7 +8,8 @@ import {
   createClassroom,
   listClassrooms as sbListClassrooms,
   getClassroomMembers,
-  getTier
+  getTier,
+  getInstructorStudents
 } from '../data/supabaseApi'
 import { supabase } from '../lib/supabase'
 
@@ -27,7 +28,7 @@ interface AuthContextValue {
   logout: () => Promise<void>
   register: (identifier: string, password: string, username: string, role: 'student' | 'instructor') => Promise<{ ok: boolean; error?: string }>
   joinClassroom: (code: string) => Promise<{ ok: boolean; error?: string }>
-  createClassroom: (name: string) => Promise<{ ok: boolean; classroomId?: string; error?: string }>
+  createClassroom: (name: string, maxSize?: number) => Promise<{ ok: boolean; classroomId?: string; error?: string }>
   createCode: (classroomId: string) => Promise<{ code: string; error?: string }>
   listClassrooms: () => Promise<any[]>
   listCodes: (classroomId?: string) => Promise<any[]>
@@ -142,11 +143,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  const createClassroomFn = async (name: string) => {
+  const createClassroomFn = async (name: string, maxSize?: number) => {
     if (!user) return { ok: false, error: 'not_logged_in' }
     if (USE_SUPABASE) {
       try {
-        const classroom = await createClassroom(user.id, name)
+        const classroom = await createClassroom(user.id, name, maxSize)
         return { ok: true, classroomId: classroom.id }
       } catch (e: any) {
         return { ok: false, error: e.message || 'create_failed' }

@@ -4,6 +4,7 @@ import { Sidebar } from './components/layout/Sidebar'
 import { Dashboard } from './pages/Dashboard'
 import { Students } from './pages/Students'
 import { Settings } from './pages/Settings'
+import { Subscription } from './pages/Subscription'
 import { StudentLayout } from './components/classroom/StudentLayout'
 import { ThemeProvider } from './context/ThemeContext'
 import { ViewProvider, useView } from './context/ViewContext'
@@ -35,6 +36,8 @@ function InnerApp() {
         return <Dashboard onOpenStudent={(id: string) => { setSelectedStudentId(id); setActiveTab('student'); }} />
       case 'students':
         return <Students onOpenStudent={(id: string) => { setSelectedStudentId(id); setActiveTab('student'); }} />
+      case 'subscription':
+        return <Subscription />
       case 'student':
         return selectedStudentId ? (
           <StudentLayout studentId={selectedStudentId} onBack={() => { setSelectedStudentId(null); setActiveTab('students'); }} />

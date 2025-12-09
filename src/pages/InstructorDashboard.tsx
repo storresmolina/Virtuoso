@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
+import { CreateClassroomModal } from '../components/shared/CreateClassroomModal'
 
 export const InstructorDashboard: React.FC = () => {
   const { user, listClassrooms, createClassroom, listClassroomMembers, getTierInfo } = useAuth()
   const [classrooms, setClassrooms] = useState<any[]>([])
-  const [selectedClassroom, setSelectedClassroom] = useState<string | null>(null)
-  const [members, setMembers] = useState<any[]>([])
   const [tier, setTier] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [newClassroomName, setNewClassroomName] = useState('')
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
   useEffect(() => {
     load()
@@ -20,101 +19,234 @@ export const InstructorDashboard: React.FC = () => {
       const [cls, t] = await Promise.all([listClassrooms(), getTierInfo()])
       setClassrooms(cls)
       setTier(t)
-      if (cls.length > 0) {
-        setSelectedClassroom(cls[0].id)
-        const m = await listClassroomMembers(cls[0].id)
-        setMembers(m)
-      }
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleCreateClassroom() {
-    if (!newClassroomName.trim()) return
-    const r = await createClassroom(newClassroomName.trim())
+  async function handleCreateClassroom(name: string, maxSize: number) {
+    const r = await createClassroom(name, maxSize)
     if (r.ok) {
-      setNewClassroomName('')
       await load()
+    } else {
+      throw new Error(r.error || 'Failed to create classroom')
     }
-  }
-
-  async function selectClassroom(id: string) {
-    setSelectedClassroom(id)
-    const m = await listClassroomMembers(id)
-    setMembers(m)
   }
 
   if (loading) return <div style={{padding:24}}>Loading...</div>
 
-  const currentClassroom = classrooms.find(c => c.id === selectedClassroom)
-
   return (
-    <div style={{padding:24}}>
-      <h2>Instructor Dashboard</h2>
-      <p>Welcome, {user?.name || user?.username}</p>
+    <div style={{padding:24,maxWidth:1200,margin:'0 auto'}}>
+      <div style={{marginBottom:32}}>
+        <h2 style={{
+          fontSize:'2rem',
+          fontFamily:'var(--font-title)',
+          fontStyle:'italic',
+          marginBottom:8
+        }}>
+          Instructor Dashboard
+        </h2>
+        <p style={{color:'var(--text-secondary)',fontSize:'1rem'}}>
+          Welcome, {user?.name || user?.username}
+        </p>
+      </div>
       
       {tier && (
-        <div style={{marginTop:16,padding:12,background:'var(--bg-secondary)',borderRadius:8}}>
-          <strong>Your Plan:</strong> {tier.name} 
-          {tier.max_students !== null && <span> (max {tier.max_students} {tier.max_students === 1 ? 'student' : 'students'} per classroom)</span>}
-          {tier.ai_analysis_enabled && <span> • AI Analysis Enabled ✨</span>}
+        <div style={{
+          marginBottom:32,
+          padding:16,
+          background:'var(--bg-secondary)',
+          borderRadius:12,
+          border:'1px solid var(--border-color)'
+        }}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
+            <div>
+              <strong style={{fontSize:'1.1rem',color:'var(--text-primary)'}}>
+                {tier.name} Plan
+              </strong>
+              {tier.max_students !== null && (
+                <span style={{marginLeft:12,color:'var(--text-secondary)',fontSize:'0.95rem'}}>
+                  • Max {tier.max_students} {tier.max_students === 1 ? 'student' : 'students'} per classroom
+                </span>
+              )}
+              {tier.ai_analysis_enabled && (
+                <span style={{marginLeft:12,color:'var(--accent-primary)',fontSize:'0.95rem'}}>
+                  • AI Analysis ✨
+                </span>
+              )}
+            </div>
+            {tier.name === 'Free' && (
+              <button 
+                className="primary-btn"
+                style={{padding:'8px 16px'}}
+                onClick={() => {/* TODO: Navigate to upgrade page */}}
+              >
+                Upgrade to Premium
+              </button>
+            )}
+          </div>
         </div>
       )}
 
-      <section style={{marginTop:24}}>
-        <h3>Classrooms</h3>
-        <div style={{display:'flex',gap:8,marginTop:8}}>
-          <input 
-            placeholder="New classroom name" 
-            value={newClassroomName} 
-            onChange={e => setNewClassroomName(e.target.value)}
-            style={{flex:1}}
-          />
-          <button className="primary-btn" onClick={handleCreateClassroom}>Create Classroom</button>
+      <div style={{marginBottom:24,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <h3 style={{fontSize:'1.5rem',fontFamily:'var(--font-title)',fontStyle:'italic'}}>
+          My Classrooms
+        </h3>
+        <button 
+          className="primary-btn" 
+          onClick={() => setShowCreateModal(true)}
+          style={{padding:'10px 20px',fontSize:'1rem'}}
+        >
+          + Create Classroom
+        </button>
+      </div>
+
+      {classrooms.length === 0 ? (
+        <div style={{
+          textAlign:'center',
+          padding:'48px 24px',
+          background:'var(--bg-secondary)',
+          borderRadius:12,
+          border:'1px solid var(--border-color)'
+        }}>
+          <div style={{fontSize:'3rem',marginBottom:16}}>🎓</div>
+          <h4 style={{fontSize:'1.25rem',marginBottom:8,color:'var(--text-primary)'}}>
+            No Classrooms Yet
+          </h4>
+          <p style={{color:'var(--text-secondary)',marginBottom:24,fontSize:'0.95rem'}}>
+            Create your first classroom to start teaching students
+          </p>
+          <button 
+            className="primary-btn"
+            onClick={() => setShowCreateModal(true)}
+            style={{padding:'10px 24px'}}
+          >
+            Create Your First Classroom
+          </button>
         </div>
-        <div style={{marginTop:12,display:'flex',gap:8,flexWrap:'wrap'}}>
-          {classrooms.map(c => (
-            <button 
-              key={c.id}
-              className={selectedClassroom === c.id ? 'primary-btn' : 'btn-secondary'}
-              onClick={() => selectClassroom(c.id)}
-            >
-              {c.name} ({c.member_count || 0})
-            </button>
+      ) : (
+        <div style={{
+          display:'grid',
+          gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))',
+          gap:20
+        }}>
+          {classrooms.map(classroom => (
+            <ClassroomCard
+              key={classroom.id}
+              classroom={classroom}
+              onViewDetails={() => {/* TODO: Navigate to classroom details */}}
+            />
           ))}
         </div>
-      </section>
+      )}
 
-      {currentClassroom && (
-        <section style={{marginTop:24}}>
-          <h3>Members in "{currentClassroom.name}"</h3>
-          {members.length === 0 ? (
-            <p style={{color:'var(--text-secondary)'}}>No students yet. Share a classroom code from Settings.</p>
-          ) : (
-            <table style={{width:'100%',borderCollapse:'collapse',marginTop:8}}>
-              <thead>
-                <tr style={{textAlign:'left',borderBottom:'1px solid var(--border-color)'}}>
-                  <th style={{padding:'8px'}}>Email</th>
-                  <th style={{padding:'8px'}}>Name</th>
-                  <th style={{padding:'8px'}}>Joined</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((m: any) => (
-                  <tr key={m.id} style={{borderBottom:'1px solid var(--border-color)'}}>
-                    <td style={{padding:'8px'}}>{m.email || '-'}</td>
-                    <td style={{padding:'8px'}}>{m.name || '-'}</td>
-                    <td style={{padding:'8px',fontSize:12,opacity:0.8}}>
-                      {new Date(m.created_at).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
+      {showCreateModal && (
+        <CreateClassroomModal
+          onClose={() => setShowCreateModal(false)}
+          onCreate={handleCreateClassroom}
+          maxStudentsAllowed={tier?.max_students ?? null}
+        />
       )}
     </div>
   )
 }
+
+interface ClassroomCardProps {
+  classroom: any
+  onViewDetails: () => void
+}
+
+const ClassroomCard: React.FC<ClassroomCardProps> = ({ classroom, onViewDetails }) => {
+  const memberCount = classroom.member_count || 0
+  const maxSize = classroom.max_size
+  const isPrivate = maxSize === 1
+  
+  return (
+    <div style={{
+      background:'var(--bg-secondary)',
+      borderRadius:12,
+      border:'1px solid var(--border-color)',
+      padding:20,
+      transition:'all 0.3s ease',
+      cursor:'pointer'
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.transform = 'translateY(-4px)'
+      e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)'
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform = 'translateY(0)'
+      e.currentTarget.style.boxShadow = 'none'
+    }}
+    onClick={onViewDetails}
+    >
+      <div style={{display:'flex',alignItems:'start',justifyContent:'space-between',marginBottom:16}}>
+        <div style={{flex:1}}>
+          <h4 style={{
+            fontSize:'1.25rem',
+            fontFamily:'var(--font-title)',
+            fontStyle:'italic',
+            marginBottom:4,
+            color:'var(--text-primary)'
+          }}>
+            {isPrivate ? '🎵 Private Instruction' : classroom.name}
+          </h4>
+          {!isPrivate && (
+            <p style={{
+              fontSize:'0.85rem',
+              color:'var(--text-secondary)',
+              margin:0
+            }}>
+              Created {new Date(classroom.created_at).toLocaleDateString()}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div style={{
+        display:'flex',
+        alignItems:'center',
+        gap:8,
+        padding:'12px 16px',
+        background:'var(--bg-primary)',
+        borderRadius:8,
+        marginBottom:12
+      }}>
+        <span style={{fontSize:'1.5rem'}}>👥</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:'0.85rem',color:'var(--text-secondary)'}}>Students</div>
+          <div style={{fontSize:'1.25rem',fontWeight:600,color:'var(--text-primary)'}}>
+            {memberCount}
+            {maxSize && <span style={{fontSize:'0.9rem',fontWeight:400,color:'var(--text-secondary)'}}> / {maxSize}</span>}
+          </div>
+        </div>
+      </div>
+
+      {maxSize && memberCount >= maxSize && (
+        <div style={{
+          fontSize:'0.85rem',
+          color:'#e53e3e',
+          padding:8,
+          background:'rgba(229,62,62,0.1)',
+          borderRadius:6,
+          marginBottom:12,
+          textAlign:'center'
+        }}>
+          ⚠️ Classroom Full
+        </div>
+      )}
+
+      <button 
+        className="btn-secondary"
+        style={{width:'100%',padding:'10px',fontSize:'0.95rem'}}
+        onClick={(e) => {
+          e.stopPropagation()
+          onViewDetails()
+        }}
+      >
+        View Details
+      </button>
+    </div>
+  )
+}
+

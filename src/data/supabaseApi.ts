@@ -21,6 +21,7 @@ export type Classroom = {
   instructor_id: string;
   created_at: string;
   member_count?: number;
+  max_size?: number | null;
 };
 
 export type MembershipTier = {
@@ -32,10 +33,15 @@ export type MembershipTier = {
 };
 
 // Classrooms
-export async function createClassroom(instructorId: string, name: string): Promise<Classroom> {
+export async function createClassroom(instructorId: string, name: string, maxSize?: number): Promise<Classroom> {
+  const insertData: any = { instructor_id: instructorId, name };
+  // Only include max_size if the column exists (after migration)
+  if (maxSize !== undefined) {
+    insertData.max_size = maxSize;
+  }
   const { data, error } = await supabase
     .from('classrooms')
-    .insert({ instructor_id: instructorId, name })
+    .insert(insertData)
     .select()
     .single();
   if (error) throw error;
@@ -110,33 +116,21 @@ export async function joinClassroomByCode(userId: string, code: string): Promise
   if (codeErr || !codeData?.classroom_id) throw new Error('invalid_code');
   if (codeData.used) throw new Error('code_already_used');
   
-  // Check tier limit
+  // Get classroom details
   const { data: classroom } = await supabase
     .from('classrooms')
-    .select('instructor_id')
+    .select('instructor_id, max_size')
     .eq('id', codeData.classroom_id)
     .single();
   if (!classroom) throw new Error('classroom_not_found');
   
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('membership_tier')
-    .eq('id', classroom.instructor_id)
-    .single();
-  
-  const tier = profile?.membership_tier ?? 'free';
-  const { data: tierData } = await supabase
-    .from('membership_tiers')
-    .select('max_students')
-    .eq('id', tier)
-    .single();
-  
-  if (tierData?.max_students !== null && tierData?.max_students !== undefined) {
+  // Check if classroom has its own max_size limit
+  if (classroom.max_size !== null && classroom.max_size !== undefined) {
     const { count } = await supabase
       .from('classroom_members')
       .select('*', { count: 'exact', head: true })
       .eq('classroom_id', codeData.classroom_id);
-    if ((count ?? 0) >= tierData.max_students) {
+    if ((count ?? 0) >= classroom.max_size) {
       throw new Error('classroom_full');
     }
   }
@@ -186,4 +180,33 @@ export async function listStudents(): Promise<StudentRow[]> {
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as StudentRow[];
+}
+
+// Get all students for an instructor with their classroom info
+export async function getInstructorStudents(instructorId: string): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('classroom_members')
+    .select(`
+      user_id,
+      classroom_id,
+      created_at,
+      classrooms!inner(id, name, max_size, instructor_id),
+      profiles!inner(id, email, name, created_at)
+    `)
+    .eq('classrooms.instructor_id', instructorId)
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  
+  // Transform the data to a cleaner format
+  return (data ?? []).map((item: any) => ({
+    id: item.profiles.id,
+    email: item.profiles.email,
+    name: item.profiles.name,
+    joined_at: item.created_at,
+    classroom_id: item.classrooms.id,
+    classroom_name: item.classrooms.name,
+    classroom_max_size: item.classrooms.max_size,
+    // TODO: Add practice sessions count, last active, etc.
+  }));
 }
