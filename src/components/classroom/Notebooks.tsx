@@ -1,16 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './Notebooks.css';
+import { useAuth } from '../../auth/AuthContext';
+import { getInstructorNotebooks, createNotebook, updateNotebook, deleteNotebook } from '../../data/supabaseApi';
 
 interface NotebookEntry {
   id: string;
   title: string;
-  content: string;
+  content?: string;
   formattedContent?: string;
-  lastEdited: string;
-  createdAt: string;
-  class: string;
-  studentId?: string;
-  attachedDocuments: string[];
+  updated_at: string;
+  created_at: string;
+  class_name?: string;
+  instructor_id?: string;
+  attachedDocuments?: string[];
+  lastEdited?: string;
+  class?: string;
 }
 
 interface TextFormat {
@@ -26,40 +30,13 @@ interface NotebooksProps {
 }
 
 export const Notebooks: React.FC<NotebooksProps> = ({ 
-  studentId,
   availableDocuments = []
 }) => {
-  const [notebooks, setNotebooks] = useState<NotebookEntry[]>([
-    {
-      id: '1',
-      title: 'Week 3 - Finger Technique',
-      content: 'Focus on proper hand position and finger independence. Key points to cover:\n• Thumb positioning\n• Finger curvature\n• Practice scales daily',
-      lastEdited: '2024-11-10',
-      createdAt: '2024-11-10',
-      class: 'Piano Basics 101',
-      studentId: '1',
-      attachedDocuments: []
-    },
-    {
-      id: '2',
-      title: 'Advanced Arpeggios',
-      content: 'Introduction to complex arpeggio patterns. Topics:\n• Broken chord variations\n• Speed techniques\n• Musical expression',
-      lastEdited: '2024-11-08',
-      createdAt: '2024-11-05',
-      class: 'Advanced Techniques',
-      studentId: '2',
-      attachedDocuments: []
-    },
-    {
-      id: '3',
-      title: 'Theory: Chord Progressions',
-      content: 'Understanding common chord progressions in popular music',
-      lastEdited: '2024-11-05',
-      createdAt: '2024-11-01',
-      class: 'Music Theory',
-      attachedDocuments: []
-    },
-  ]);
+  const { user } = useAuth();
+  const [notebooks, setNotebooks] = useState<NotebookEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [selectedNotebook, setSelectedNotebook] = useState<NotebookEntry | null>(null);
   const [editContent, setEditContent] = useState('');
@@ -76,6 +53,34 @@ export const Notebooks: React.FC<NotebooksProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
+  // Load notebooks on mount
+  useEffect(() => {
+    loadNotebooks();
+  }, [user?.id]);
+
+  async function loadNotebooks() {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getInstructorNotebooks(user.id);
+      setNotebooks(data.map(n => ({
+        ...n,
+        content: n.content || '',
+        instructor_id: n.instructor_id
+      })) as NotebookEntry[]);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load notebooks');
+      console.error('Notebooks load error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     // adjust textarea height when editing starts or content changes
     if (isEditing && textareaRef.current) {
@@ -84,74 +89,99 @@ export const Notebooks: React.FC<NotebooksProps> = ({
     }
   }, [isEditing, editContent, selectedNotebook]);
 
-  const handleCreateNew = () => {
-    const now = new Date().toISOString().split('T')[0];
-    const newNotebook: NotebookEntry = {
-      id: Date.now().toString(),
-      title: 'New Notebook',
-      content: '',
-      lastEdited: now,
-      createdAt: now,
-      class: 'Piano Basics 101',
-      studentId: studentId,
-      attachedDocuments: []
-    };
-    setNotebooks([newNotebook, ...notebooks]);
-    setSelectedNotebook(newNotebook);
-    setEditContent('');
-    setEditTitle('New Notebook');
-    setEditClass('Piano Basics 101');
-    setIsEditing(true);
+  const handleCreateNew = async () => {
+    if (!user) return;
+    
+    try {
+      setIsSaving(true);
+      const newNotebook = await createNotebook(user.id, {
+        title: 'New Notebook',
+        content: '',
+        class_name: 'Piano Basics 101'
+      });
+      
+      const newEntry: NotebookEntry = {
+        ...newNotebook,
+        lastEdited: new Date().toISOString().split('T')[0],
+        attachedDocuments: []
+      };
+      
+      setNotebooks([newEntry, ...notebooks]);
+      setSelectedNotebook(newEntry);
+      setEditContent('');
+      setEditTitle('New Notebook');
+      setEditClass('Piano Basics 101');
+      setIsEditing(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create notebook');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSelectNotebook = (notebook: NotebookEntry) => {
     setSelectedNotebook(notebook);
-    setEditContent(notebook.content);
+    setEditContent(notebook.content || '');
     setEditTitle(notebook.title);
-    setEditClass(notebook.class);
+    setEditClass(notebook.class_name || '');
     setIsEditing(false);
     setShowDocumentSelector(false);
   };
 
-  const handleSaveNotebook = () => {
-    if (selectedNotebook) {
-      const now = new Date().toISOString().split('T')[0];
-      setNotebooks(notebooks.map(nb =>
-        nb.id === selectedNotebook.id
-          ? { 
-              ...nb, 
-              content: editContent,
-              title: editTitle,
-              class: editClass,
-              lastEdited: now 
-            }
-          : nb
-      ));
-      setSelectedNotebook({ 
-        ...selectedNotebook, 
-        content: editContent,
+  const handleSaveNotebook = async () => {
+    if (!selectedNotebook || !user) return;
+    
+    try {
+      setIsSaving(true);
+      await updateNotebook(selectedNotebook.id, {
         title: editTitle,
-        class: editClass,
-        lastEdited: now
+        content: editContent,
+        class_name: editClass
       });
+      
+      const updated = {
+        ...selectedNotebook,
+        title: editTitle,
+        content: editContent,
+        class_name: editClass,
+        lastEdited: new Date().toISOString().split('T')[0]
+      };
+      
+      setNotebooks(notebooks.map(nb => nb.id === selectedNotebook.id ? updated : nb));
+      setSelectedNotebook(updated);
       setIsEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save notebook');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleDeleteNotebook = (id: string) => {
-    setNotebooks(notebooks.filter(nb => nb.id !== id));
-    if (selectedNotebook?.id === id) {
-      setSelectedNotebook(null);
-      setEditContent('');
-      setIsEditing(false);
+  const handleDeleteNotebook = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this notebook?')) return;
+    
+    try {
+      setIsSaving(true);
+      await deleteNotebook(id);
+      
+      setNotebooks(notebooks.filter(nb => nb.id !== id));
+      if (selectedNotebook?.id === id) {
+        setSelectedNotebook(null);
+        setEditContent('');
+        setIsEditing(false);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete notebook');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleAttachDocument = (docId: string) => {
-    if (selectedNotebook && !selectedNotebook.attachedDocuments.includes(docId)) {
+    if (selectedNotebook && !(selectedNotebook.attachedDocuments || []).includes(docId)) {
       const updated = {
         ...selectedNotebook,
-        attachedDocuments: [...selectedNotebook.attachedDocuments, docId]
+        attachedDocuments: [...(selectedNotebook.attachedDocuments || []), docId]
       };
       setNotebooks(notebooks.map(nb => nb.id === selectedNotebook.id ? updated : nb));
       setSelectedNotebook(updated);
@@ -163,7 +193,7 @@ export const Notebooks: React.FC<NotebooksProps> = ({
     if (selectedNotebook) {
       const updated = {
         ...selectedNotebook,
-        attachedDocuments: selectedNotebook.attachedDocuments.filter(d => d !== docId)
+        attachedDocuments: (selectedNotebook.attachedDocuments || []).filter(d => d !== docId)
       };
       setNotebooks(notebooks.map(nb => nb.id === selectedNotebook.id ? updated : nb));
       setSelectedNotebook(updated);
@@ -171,10 +201,10 @@ export const Notebooks: React.FC<NotebooksProps> = ({
   };
 
   const getAttachedDocNames = () => {
-    return selectedNotebook?.attachedDocuments.map(docId => {
+    return (selectedNotebook?.attachedDocuments || []).map(docId => {
       const doc = availableDocuments.find(d => d.id === docId);
       return doc?.title || `Document ${docId}`;
-    }) || [];
+    });
   };
 
   // Apply or remove simple markup around the selected text.
@@ -348,17 +378,34 @@ export const Notebooks: React.FC<NotebooksProps> = ({
         <p>Create elegant class notes with formatting, attachments, and organization</p>
       </div>
 
+      {error && (
+        <div className="error-banner" style={{ 
+          padding: '12px 16px', 
+          marginBottom: '16px', 
+          backgroundColor: '#fee', 
+          border: '1px solid #f99', 
+          borderRadius: '4px',
+          color: '#c33'
+        }}>
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          Loading notebooks...
+        </div>
+      ) : (
       <div className="notebooks-container">
         <div className="notebooks-sidebar">
-          <button className="create-btn" onClick={handleCreateNew}>
-            ✏️ New Notebook
+          <button className="create-btn" onClick={handleCreateNew} disabled={isSaving}>
+            ✏️ {isSaving ? 'Saving...' : 'New Notebook'}
           </button>
 
           <div className="notebooks-list">
             <h3>Your Notebooks</h3>
             {notebooks
-              .filter(nb => !studentId || nb.studentId === studentId)
-              .sort((a, b) => new Date(b.lastEdited).getTime() - new Date(a.lastEdited).getTime())
+              .sort((a, b) => new Date(b.lastEdited || 0).getTime() - new Date(a.lastEdited || 0).getTime())
               .map(notebook => (
                 <div
                   key={notebook.id}
@@ -375,17 +422,18 @@ export const Notebooks: React.FC<NotebooksProps> = ({
                           handleDeleteNotebook(notebook.id);
                         }
                       }}
+                      disabled={isSaving}
                     >
                       ✕
                     </button>
                   </div>
-                  <p className="notebook-class">{notebook.class}</p>
+                  <p className="notebook-class">{notebook.class_name}</p>
                   <p className="notebook-date">
-                    {new Date(notebook.lastEdited).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                    {new Date(notebook.lastEdited || notebook.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                   </p>
                 </div>
               ))}
-            {notebooks.filter(nb => !studentId || nb.studentId === studentId).length === 0 && (
+            {notebooks.length === 0 && (
               <p className="no-notebooks">No notebooks yet. Create one to get started!</p>
             )}
           </div>
@@ -518,12 +566,12 @@ export const Notebooks: React.FC<NotebooksProps> = ({
                       availableDocuments.map(doc => (
                         <div
                           key={doc.id}
-                          className={`doc-option ${selectedNotebook.attachedDocuments.includes(doc.id) ? 'selected' : ''}`}
+                          className={`doc-option ${(selectedNotebook.attachedDocuments || []).includes(doc.id) ? 'selected' : ''}`}
                           onClick={() => handleAttachDocument(doc.id)}
                         >
                           <input
                             type="checkbox"
-                            checked={selectedNotebook.attachedDocuments.includes(doc.id)}
+                            checked={(selectedNotebook.attachedDocuments || []).includes(doc.id)}
                             onChange={() => handleAttachDocument(doc.id)}
                           />
                           <span>{doc.title}</span>
@@ -535,7 +583,7 @@ export const Notebooks: React.FC<NotebooksProps> = ({
                   </div>
                 )}
 
-                {selectedNotebook.attachedDocuments.length > 0 && (
+                {(selectedNotebook.attachedDocuments || []).length > 0 && (
                   <ul className="attachments-list">
                     {getAttachedDocNames().map((name, idx) => (
                       <li key={idx}>
@@ -543,7 +591,7 @@ export const Notebooks: React.FC<NotebooksProps> = ({
                         {isEditing && (
                           <button
                             className="remove-attachment"
-                            onClick={() => handleDetachDocument(selectedNotebook.attachedDocuments[idx])}
+                            onClick={() => handleDetachDocument((selectedNotebook.attachedDocuments || [])[idx])}
                           >
                             ✕
                           </button>
@@ -565,9 +613,9 @@ export const Notebooks: React.FC<NotebooksProps> = ({
                         className="cancel-btn" 
                         onClick={() => {
                           setIsEditing(false);
-                          setEditContent(selectedNotebook.content);
+                          setEditContent(selectedNotebook.content || '');
                           setEditTitle(selectedNotebook.title);
-                          setEditClass(selectedNotebook.class);
+                          setEditClass(selectedNotebook.class_name || '');
                         }}
                       >
                         Cancel
@@ -579,7 +627,7 @@ export const Notebooks: React.FC<NotebooksProps> = ({
                     </button>
                   )}
                 </div>
-                <p className="last-saved">Last edited: {new Date(selectedNotebook.lastEdited).toLocaleDateString()}</p>
+                <p className="last-saved">Last edited: {new Date(selectedNotebook.lastEdited || selectedNotebook.updated_at).toLocaleDateString()}</p>
               </div>
             </div>
           ) : (
@@ -596,6 +644,7 @@ export const Notebooks: React.FC<NotebooksProps> = ({
           )}
         </div>
       </div>
+      )}
     </div>
   );
 };

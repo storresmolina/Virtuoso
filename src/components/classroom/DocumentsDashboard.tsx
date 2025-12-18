@@ -1,27 +1,28 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './DocumentsDashboard.css';
+import { useAuth } from '../../auth/AuthContext';
+import type { Document } from '../../data/supabaseApi';
+import { 
+  getClassroomDocuments, 
+  createDocument, 
+  updateDocument, 
+  deleteDocument as deleteDocumentApi, 
+  uploadFile, 
+  getSignedUrl, 
+  deleteStorageFile
+} from '../../data/supabaseApi';
 
-interface DocumentFile {
-  id: string;
-  name: string; // filename
-  title?: string; // editable title
-  type: string;
-  uploadDate: string;
-  size: string;
-  comments?: string;
-  visible?: boolean;
+interface DocumentFile extends Document {
   previewUrl?: string; // object URL for previewing uploaded files
-  // optional association with a student (per-student classroom)
-  studentId?: string;
 }
 
-// Accept optional studentId to show documents scoped to a student's classroom
-export const DocumentsDashboard: React.FC<{ studentId?: string; onDocumentsChange?: (docs: any[]) => void }> = ({ studentId, onDocumentsChange }) => {
-  const [documents, setDocuments] = useState<DocumentFile[]>([
-    { id: '1', name: 'Chopin_Nocturne_Op9_No2.pdf', title: 'Chopin Nocturne Op.9 No.2', type: 'sheet_music', uploadDate: '2024-11-10', size: '2.4 MB', studentId: '1', visible: true },
-    { id: '2', name: 'Finger_Exercises.pdf', title: 'Finger Exercises', type: 'reference', uploadDate: '2024-11-08', size: '1.8 MB', studentId: '2', visible: true },
-    { id: '3', name: 'Assignment_Week3.pdf', title: 'Assignment Week 3', type: 'assignment', uploadDate: '2024-11-05', size: '0.9 MB', visible: false },
-  ]);
+// Accept optional classroomId for scoped document access
+export const DocumentsDashboard: React.FC<{ classroomId?: string; onDocumentsChange?: (docs: any[]) => void }> = ({ classroomId, onDocumentsChange }) => {
+  const { user } = useAuth();
+  const [documents, setDocuments] = useState<DocumentFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [filterType, setFilterType] = useState<string>('');
@@ -30,55 +31,116 @@ export const DocumentsDashboard: React.FC<{ studentId?: string; onDocumentsChang
   const [editFields, setEditFields] = useState<{ title?: string; comments?: string }>({});
   const createdUrlsRef = useRef<string[]>([]);
 
+  // Load documents from database
+  useEffect(() => {
+    const loadDocuments = async () => {
+      if (!user || !classroomId) return;
+      
+      try {
+        setLoading(true);
+        const data = await getClassroomDocuments(classroomId);
+        setDocuments(data as DocumentFile[]);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load documents');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDocuments();
+  }, [user, classroomId]);
+
   // Notify parent when documents change
   useEffect(() => {
     if (onDocumentsChange) {
-      const filtered = documents.filter(d => !studentId || d.studentId === studentId);
-      onDocumentsChange(filtered.map(d => ({ id: d.id, name: d.name, title: d.title })));
+      onDocumentsChange(documents.map(d => ({ id: d.id, title: d.title, name: d.name })));
     }
-  }, [documents, studentId, onDocumentsChange]);
+  }, [documents, onDocumentsChange]);
 
   const openFilePicker = () => fileInputRef.current?.click();
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files && files.length) {
-      const newDocs: DocumentFile[] = Array.from(files).map(file => {
-        const id = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    if (!files || !files.length || !user || !classroomId) return;
+
+    try {
+      setIsSaving(true);
+      
+      for (const file of Array.from(files)) {
+        // 1. Upload file to Storage (private bucket)
+        const { path } = await uploadFile(
+          'classroom-documents',
+          `${classroomId}/${Date.now()}-${file.name}`,
+          file
+        );
+
+        // 2. Create document record in database (store path only, not public URL)
         const ext = file.name.split('.').pop()?.toLowerCase() || '';
         const type = ext === 'pdf' ? 'sheet_music' : (ext === 'doc' || ext === 'docx' ? 'reference' : 'reference');
-        const previewUrl = URL.createObjectURL(file);
-        createdUrlsRef.current.push(previewUrl);
-        return {
-          id,
-          name: file.name,
-          title: file.name.replace(/\.[^.]+$/, ''),
-          type,
-          uploadDate: new Date().toISOString().slice(0,10),
-          size: `${(file.size/1024/1024).toFixed(2)} MB`,
-          studentId: studentId,
-          visible: true,
-          previewUrl,
-        };
-      });
-      setDocuments(prev => [...newDocs, ...prev]);
-      // reset input so same-file uploads are possible
+        
+        const newDoc = await createDocument(
+          classroomId,
+          user.id,
+          {
+            title: file.name.replace(/\.[^.]+$/, ''),
+            name: file.name,
+            file_url: path,
+            type,
+            file_size_mb: Math.round(file.size / 1024 / 1024 * 100) / 100,
+            upload_date: new Date().toISOString(),
+            visible: true
+          }
+        );
+
+        setDocuments(prev => [...prev, newDoc as DocumentFile]);
+      }
+      
       e.currentTarget.value = '';
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload documents');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const deleteDocument = (id: string) => {
-    const doc = documents.find(d => d.id === id);
-    if (doc && doc.previewUrl) {
-      try { URL.revokeObjectURL(doc.previewUrl); } catch {}
-      createdUrlsRef.current = createdUrlsRef.current.filter(u => u !== doc.previewUrl);
+  const deleteDocument = async (id: string) => {
+    if (!confirm('Delete this document?')) return;
+
+    try {
+      setIsSaving(true);
+      const doc = documents.find(d => d.id === id);
+      
+      // Delete from Storage if it has a path
+      if (doc && doc.file_url) {
+        await deleteStorageFile('classroom-documents', doc.file_url);
+      }
+      
+      // Delete from Database
+      await deleteDocumentApi(id);
+      
+      setDocuments(documents.filter(d => d.id !== id));
+      if (editingId === id) setEditingId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete document');
+    } finally {
+      setIsSaving(false);
     }
-    setDocuments(documents.filter(doc => doc.id !== id));
-    if (editingId === id) setEditingId(null);
   };
 
-  const toggleVisibility = (id: string) => {
-    setDocuments(prev => prev.map(d => d.id === id ? { ...d, visible: !d.visible } : d));
+  const toggleVisibility = async (id: string) => {
+    try {
+      const doc = documents.find(d => d.id === id);
+      if (!doc) return;
+
+      const updated = await updateDocument(id, {
+        visible: !doc.visible
+      });
+
+      setDocuments(prev => prev.map(d => d.id === id ? { ...d, visible: updated.visible } : d));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update document');
+    }
   };
 
   const startEdit = (doc: DocumentFile) => {
@@ -86,15 +148,49 @@ export const DocumentsDashboard: React.FC<{ studentId?: string; onDocumentsChang
     setEditFields({ title: doc.title, comments: doc.comments });
   };
 
-  const saveEdit = (id: string) => {
-    setDocuments(prev => prev.map(d => d.id === id ? { ...d, title: editFields.title, comments: editFields.comments } : d));
-    setEditingId(null);
-    setEditFields({});
+  const saveEdit = async (id: string) => {
+    try {
+      setIsSaving(true);
+      await updateDocument(id, {
+        title: editFields.title,
+        comments: editFields.comments
+      });
+
+      setDocuments(prev => prev.map(d => d.id === id ? { ...d, title: editFields.title, description: editFields.comments } : d));
+      setEditingId(null);
+      setEditFields({});
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save changes');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditFields({});
+  };
+
+  const handleDownload = async (doc: DocumentFile) => {
+    if (!doc.file_url) return;
+
+    try {
+      setIsSaving(true);
+      // Generate temporary signed URL (valid for 1 hour)
+      const signedUrl = await getSignedUrl('classroom-documents', doc.file_url, 3600);
+      
+      // Download using the signed URL
+      const link = document.createElement('a');
+      link.href = signedUrl;
+      link.download = doc.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to download file');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getTypeIcon = (type: string): string => {
@@ -116,11 +212,11 @@ export const DocumentsDashboard: React.FC<{ studentId?: string; onDocumentsChang
     };
   }, []);
 
-  const filtered = documents.filter(d => (!studentId || d.studentId === studentId) && (!filterType || d.type === filterType));
+  const filtered = documents.filter(d => !filterType || d.type === filterType);
 
   const visibleDocuments = filtered.sort((a,b) => {
-    if (sortBy === 'newest') return b.uploadDate.localeCompare(a.uploadDate);
-    if (sortBy === 'oldest') return a.uploadDate.localeCompare(b.uploadDate);
+    if (sortBy === 'newest') return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    if (sortBy === 'oldest') return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
     if (sortBy === 'name') return a.title?.localeCompare(b.title || a.name) || 0;
     return 0;
   });
@@ -132,10 +228,31 @@ export const DocumentsDashboard: React.FC<{ studentId?: string; onDocumentsChang
         <p>Manage sheet music, assignments, and class materials</p>
       </div>
 
+      {error && (
+        <div className="error-banner" style={{ 
+          padding: '12px 16px', 
+          marginBottom: '16px', 
+          backgroundColor: '#fee', 
+          border: '1px solid #f99', 
+          borderRadius: '4px',
+          color: '#c33'
+        }}>
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          Loading documents...
+        </div>
+      ) : (
+      <>
       <div className="documents-controls">
         <div className="left-controls">
-          <input ref={fileInputRef} type="file" multiple onChange={handleUpload} className="file-input-hidden" accept=".pdf" />
-          <button className="primary-btn upload-main" onClick={openFilePicker}>+ Upload Document</button>
+          <input ref={fileInputRef} type="file" multiple onChange={handleUpload} className="file-input-hidden" accept=".pdf,.doc,.docx" />
+          <button className="primary-btn upload-main" onClick={openFilePicker} disabled={isSaving}>
+            {isSaving ? '⏳ Uploading...' : '+ Upload Document'}
+          </button>
         </div>
 
         <div className="right-controls">
@@ -176,15 +293,15 @@ export const DocumentsDashboard: React.FC<{ studentId?: string; onDocumentsChang
 
               <div className="doc-meta">
                 <div className="doc-title">{doc.title || doc.name}</div>
-                <div className="doc-sub">{doc.uploadDate} • {doc.size}</div>
+                <div className="doc-sub">{new Date(doc.created_at || 0).toLocaleDateString()} • {doc.file_size_mb} MB</div>
               </div>
 
               {editingId === doc.id ? null : (
                 <div className="card-actions">
-                  <button className="action-small" title="Download">📥</button>
-                  <button className="action-small" onClick={() => toggleVisibility(doc.id)} title="Toggle visibility">{doc.visible ? '👁️' : '🚫'}</button>
-                  <button className="action-small" onClick={() => startEdit(doc)} title="Edit">✏️</button>
-                  <button className="action-small delete" onClick={() => deleteDocument(doc.id)} title="Delete">🗑️</button>
+                  <button className="action-small" onClick={() => handleDownload(doc)} title="Download" disabled={isSaving}>📥</button>
+                  <button className="action-small" onClick={() => toggleVisibility(doc.id)} title="Toggle visibility" disabled={isSaving}>{doc.visible ? '👁️' : '🚫'}</button>
+                  <button className="action-small" onClick={() => startEdit(doc)} title="Edit" disabled={isSaving}>✏️</button>
+                  <button className="action-small delete" onClick={() => deleteDocument(doc.id)} title="Delete" disabled={isSaving}>🗑️</button>
                 </div>
               )}
 
@@ -193,8 +310,8 @@ export const DocumentsDashboard: React.FC<{ studentId?: string; onDocumentsChang
                   <input className="edit-input" value={editFields.title ?? ''} onChange={e => setEditFields(prev => ({ ...prev, title: e.target.value }))} placeholder="Title" />
                   <textarea className="edit-textarea" value={editFields.comments ?? ''} onChange={e => setEditFields(prev => ({ ...prev, comments: e.target.value }))} placeholder="Comments / Notes" />
                   <div className="edit-actions">
-                    <button className="primary-btn" onClick={() => saveEdit(doc.id)}>Save</button>
-                    <button className="action-small" onClick={cancelEdit}>Cancel</button>
+                    <button className="primary-btn" onClick={() => saveEdit(doc.id)} disabled={isSaving}>Save</button>
+                    <button className="action-small" onClick={cancelEdit} disabled={isSaving}>Cancel</button>
                   </div>
                 </div>
               )}
@@ -202,6 +319,8 @@ export const DocumentsDashboard: React.FC<{ studentId?: string; onDocumentsChang
           );
         })}
       </div>
+      </>
+      )}
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Students.css';
 import { DocumentsDashboard } from '../components/classroom/DocumentsDashboard';
 import { Notebooks } from '../components/classroom/Notebooks';
@@ -15,12 +16,9 @@ interface StudentData {
   joined_at: string;
 }
 
-interface StudentsProps {
-  onOpenStudent?: (id: string) => void;
-}
-
-export const Students: React.FC<StudentsProps> = ({ onOpenStudent }) => {
+export const Students: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [students, setStudents] = useState<StudentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<StudentData | null>(null);
@@ -45,11 +43,7 @@ export const Students: React.FC<StudentsProps> = ({ onOpenStudent }) => {
   }
 
   const openClassroom = (student: StudentData) => {
-    if (onOpenStudent) {
-      onOpenStudent(student.id);
-      return;
-    }
-    setSelectedStudent(student);
+    navigate(`/student/${student.id}`);
   };
 
   const closeClassroom = () => {

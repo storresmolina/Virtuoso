@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './Schedule.css';
+import { useAuth } from '../../auth/AuthContext';
+import type { ScheduleEntry as ApiScheduleEntry } from '../../data/supabaseApi';
+import { getClassroomSchedule, getInstructorGlobalSchedule, createScheduleEntry, updateScheduleEntry, deleteScheduleEntry } from '../../data/supabaseApi';
 
 interface ScheduleEntry {
   id: string;
@@ -7,8 +10,10 @@ interface ScheduleEntry {
   topic: string;
   notes?: string;
   bullets?: string[];
-  attachedDocuments?: string[];
-  studentId?: string;
+  attached_documents?: string[];
+  attached_notebooks?: string[];
+  classroom_id?: string;
+  instructor_id?: string;
 }
 
 interface DocumentFile {
@@ -17,33 +22,64 @@ interface DocumentFile {
   title?: string;
 }
 
-export const Schedule: React.FC<{ studentId?: string; availableDocuments?: DocumentFile[] }> = ({ studentId, availableDocuments = [] }) => {
-  const [schedules, setSchedules] = useState<ScheduleEntry[]>([
-    {
-      id: '1',
-      date: '2024-11-20',
-      topic: 'Finger Technique - Week 4',
-      notes: 'Focus on hand position and finger independence.',
-      bullets: ['Review Hanon exercises', 'Practice finger independence drills', 'Check hand posture'],
-      attachedDocuments: [],
-      studentId: '1',
-    },
-    {
-      id: '2',
-      date: '2024-11-27',
-      topic: 'Sight Reading Practice',
-      notes: 'Work through beginner to intermediate sight reading pieces.',
-      bullets: ['Start with easy exercises', 'Progress to intermediate pieces'],
-      attachedDocuments: [],
-      studentId: '2',
-    },
-  ]);
+interface ScheduleProps {
+  studentId?: string;
+  classroomId?: string;
+  isGlobal?: boolean; // true for instructor's global schedule, false for classroom-specific
+  availableDocuments?: DocumentFile[];
+  isReadOnly?: boolean; // true for students viewing schedule
+}
+
+export const Schedule: React.FC<ScheduleProps> = ({ 
+  classroomId,
+  isGlobal = false,
+  availableDocuments = [],
+  isReadOnly = false
+}) => {
+  const { user } = useAuth();
+  const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const filteredSchedules = schedules || [];
+  const [error, setError] = useState<string | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<Partial<ScheduleEntry>>({});
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  // Load schedule data on mount
+  useEffect(() => {
+    loadSchedule();
+  }, [classroomId, isGlobal, user?.id]);
+
+  async function loadSchedule() {
+    setLoading(true);
+    setError(null);
+    try {
+      let data: ApiScheduleEntry[] = [];
+      
+      if (isGlobal && user?.id) {
+        // Instructor's global schedule
+        data = await getInstructorGlobalSchedule(user.id);
+      } else if (classroomId) {
+        // Classroom-specific schedule
+        data = await getClassroomSchedule(classroomId);
+      }
+      
+      setSchedules(data.map(e => ({
+        ...e,
+        classroom_id: e.classroom_id,
+        instructor_id: e.instructor_id
+      })) as ScheduleEntry[]);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load schedule');
+      console.error('Schedule load error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const openAddForm = () => {
     setShowAddForm(true);
@@ -52,30 +88,56 @@ export const Schedule: React.FC<{ studentId?: string; availableDocuments?: Docum
       topic: '',
       notes: '',
       bullets: [],
-      attachedDocuments: [],
-      studentId: studentId,
+      attached_documents: [],
+      attached_notebooks: [],
     });
   };
 
-  const addEvent = () => {
+  const addEvent = async () => {
     if (!editFields.date || !editFields.topic) {
       alert('Please fill in the date and topic');
       return;
     }
 
-    const newEvent: ScheduleEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      date: editFields.date || '',
-      topic: editFields.topic || '',
-      notes: editFields.notes || '',
-      bullets: editFields.bullets || [],
-      attachedDocuments: editFields.attachedDocuments || [],
-      studentId: studentId,
-    };
+    if (!classroomId && !isGlobal) {
+      alert('No classroom context available');
+      return;
+    }
 
-    setSchedules(prev => [...prev, newEvent].sort((a, b) => a.date.localeCompare(b.date)));
-    setShowAddForm(false);
-    setEditFields({});
+    if (!user?.id) {
+      alert('Not authenticated');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const cid = classroomId || user.id; // Use user ID as fallback for global schedule
+      const newEntry = await createScheduleEntry(
+        cid,
+        user.id,
+        {
+          date: editFields.date || '',
+          topic: editFields.topic || '',
+          notes: editFields.notes,
+          bullets: editFields.bullets,
+          attached_documents: editFields.attached_documents,
+          attached_notebooks: editFields.attached_notebooks
+        }
+      );
+
+      setSchedules(prev => [...prev, {
+        ...newEntry,
+        classroom_id: newEntry.classroom_id,
+        instructor_id: newEntry.instructor_id
+      }].sort((a, b) => a.date.localeCompare(b.date)));
+      setShowAddForm(false);
+      setEditFields({});
+    } catch (err: any) {
+      setError(err.message || 'Failed to create schedule entry');
+      console.error('Create error:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const startEdit = (entry: ScheduleEntry) => {
@@ -83,23 +145,52 @@ export const Schedule: React.FC<{ studentId?: string; availableDocuments?: Docum
     setEditFields({ ...entry });
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editFields.id) return;
-    setSchedules(prev =>
-      prev.map(e =>
-        e.id === editFields.id
-          ? { ...e, ...editFields }
-          : e
-      ).sort((a, b) => a.date.localeCompare(b.date))
-    );
-    setEditingId(null);
-    setEditFields({});
+
+    setIsSaving(true);
+    try {
+      const updated = await updateScheduleEntry(editFields.id, {
+        date: editFields.date || '',
+        topic: editFields.topic || '',
+        notes: editFields.notes,
+        bullets: editFields.bullets,
+        attached_documents: editFields.attached_documents,
+        attached_notebooks: editFields.attached_notebooks
+      });
+
+      setSchedules(prev =>
+        prev.map(e =>
+          e.id === editFields.id
+            ? { ...updated, classroom_id: updated.classroom_id, instructor_id: updated.instructor_id }
+            : e
+        ).sort((a, b) => a.date.localeCompare(b.date))
+      );
+      setEditingId(null);
+      setEditFields({});
+    } catch (err: any) {
+      setError(err.message || 'Failed to update schedule entry');
+      console.error('Update error:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const deleteEvent = (id: string) => {
-    setSchedules(prev => prev.filter(e => e.id !== id));
-    if (editingId === id) setEditingId(null);
-    setOpenMenuId(null);
+  const deleteEvent = async (id: string) => {
+    if (!confirm('Delete this schedule entry?')) return;
+
+    setIsSaving(true);
+    try {
+      await deleteScheduleEntry(id);
+      setSchedules(prev => prev.filter(e => e.id !== id));
+      if (editingId === id) setEditingId(null);
+      setOpenMenuId(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete schedule entry');
+      console.error('Delete error:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Close open menus when clicking outside
@@ -137,28 +228,49 @@ export const Schedule: React.FC<{ studentId?: string; availableDocuments?: Docum
     }));
   };
 
-  const toggleDocumentAttachment = (docName: string) => {
-    const attached = editFields.attachedDocuments || [];
-    if (attached.includes(docName)) {
+  const toggleDocumentAttachment = (docId: string) => {
+    const attached = editFields.attached_documents || [];
+    if (attached.includes(docId)) {
       setEditFields(prev => ({
         ...prev,
-        attachedDocuments: attached.filter(d => d !== docName),
+        attached_documents: attached.filter(d => d !== docId),
       }));
     } else {
       setEditFields(prev => ({
         ...prev,
-        attachedDocuments: [...attached, docName],
+        attached_documents: [...attached, docId],
       }));
     }
   };
 
-  const filteredSchedules = schedules.filter(s => !studentId || s.studentId === studentId);
+  // Close open menus when clicking outside
+  useEffect(() => {
+    const onDocClick = () => setOpenMenuId(null);
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, []);
+
+  if (loading) {
+    return <div className="schedule-container"><p>Loading schedule...</p></div>;
+  }
+
+  if (error) {
+    return <div className="schedule-container"><p style={{ color: 'red' }}>Error: {error}</p></div>;
+  }
 
   return (
     <div className="schedule-container">
       <div className="schedule-header">
         <h2>Schedule</h2>
-        <button className="primary-btn add-event-btn" onClick={openAddForm}>+ Add Event</button>
+        {!isReadOnly && (
+          <button 
+            className="primary-btn add-event-btn" 
+            onClick={openAddForm}
+            disabled={isSaving}
+          >
+            + Add Event
+          </button>
+        )}
       </div>
 
       {showAddForm && (
@@ -221,7 +333,7 @@ export const Schedule: React.FC<{ studentId?: string; availableDocuments?: Docum
                   <label key={doc.id} className="doc-checkbox">
                     <input
                       type="checkbox"
-                      checked={(editFields.attachedDocuments || []).includes(doc.name)}
+                      checked={(editFields.attached_documents || []).includes(doc.name)}
                       onChange={() => toggleDocumentAttachment(doc.name)}
                     />
                     <span>{doc.title || doc.name}</span>
@@ -301,7 +413,7 @@ export const Schedule: React.FC<{ studentId?: string; availableDocuments?: Docum
                           <label key={doc.id} className="doc-checkbox">
                             <input
                               type="checkbox"
-                              checked={(editFields.attachedDocuments || []).includes(doc.name)}
+                              checked={(editFields.attached_documents || []).includes(doc.name)}
                               onChange={() => toggleDocumentAttachment(doc.name)}
                             />
                             <span>{doc.title || doc.name}</span>
@@ -351,18 +463,18 @@ export const Schedule: React.FC<{ studentId?: string; availableDocuments?: Docum
                       <div className="schedule-bullets">
                         <span className="bullets-label">Topics to Cover:</span>
                         <ul>
-                          {entry.bullets.map((bullet, idx) => (
+                          {entry.bullets.map((bullet: string, idx: number) => (
                             bullet && <li key={idx}>{bullet}</li>
                           ))}
                         </ul>
                       </div>
                     )}
 
-                    {entry.attachedDocuments && entry.attachedDocuments.length > 0 && (
+                    {entry.attached_documents && entry.attached_documents.length > 0 && (
                       <div className="schedule-documents">
                         <span className="documents-label">📎 Attached Materials:</span>
                         <ul>
-                          {entry.attachedDocuments.map((doc, idx) => (
+                          {entry.attached_documents.map((doc: string, idx: number) => (
                             <li key={idx}>{doc}</li>
                           ))}
                         </ul>

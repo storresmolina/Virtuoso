@@ -1,12 +1,10 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import { students as STUDENTS } from '../data/students';
 
-interface DashboardProps {
-  onOpenStudent?: (id: string) => void;
-}
-
-export const Dashboard: React.FC<DashboardProps> = ({ onOpenStudent }) => {
+export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const students = STUDENTS;
   return (
     <div className="dashboard">
@@ -47,14 +45,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenStudent }) => {
         <h3>Your Students (Classrooms)</h3>
         <div className="students-grid">
           {students.map(student => (
-            <div key={student.id} className={`student-card`} onClick={() => onOpenStudent ? onOpenStudent(student.id) : undefined}>
+            <div key={student.id} className={`student-card`} onClick={() => navigate(`/student/${student.id}`)}>
               <div className="student-avatar">{student.name.charAt(0)}</div>
               <div className="student-info">
                 <h4>{student.name}</h4>
                 <p>{student.className} • Last active {student.lastActive}</p>
               </div>
               <div className="student-actions">
-                <button className="class-action-btn" onClick={(e) => { e.stopPropagation(); onOpenStudent ? onOpenStudent(student.id) : undefined; }}>Open</button>
+                <button className="class-action-btn" onClick={(e) => { e.stopPropagation(); navigate(`/student/${student.id}`); }}>Open</button>
               </div>
             </div>
           ))}

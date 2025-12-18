@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import './App.css'
 import { Sidebar } from './components/layout/Sidebar'
 import { Dashboard } from './pages/Dashboard'
@@ -16,100 +17,112 @@ import { ForgotPassword } from './pages/ForgotPassword'
 import { ResetPassword } from './pages/ResetPassword'
 import { InstructorDashboard } from './pages/InstructorDashboard'
 import { StudentDashboard } from './pages/StudentDashboard'
+import { Schedule } from './components/classroom/Schedule'
+import { Notebooks } from './components/classroom/Notebooks'
+import { DocumentsDashboard } from './components/classroom/DocumentsDashboard'
+import { InstructorClassroomPage } from './pages/InstructorClassroomPage'
 
 function InnerApp() {
-  const [activeTab, setActiveTab] = useState('dashboard')
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
+  const location = useLocation()
   const { user } = useAuth()
-  const { viewingStudentId, closeStudent } = useView()
-
-  const renderContent = () => {
-    // If a student view is opened globally, render that first
-    if (viewingStudentId) return <StudentLayout studentId={viewingStudentId} onBack={() => { closeStudent() }} />
-
-    // Drive main content by activeTab so navigation (Settings, Students, etc.) always works
-    switch (activeTab) {
-      case 'dashboard':
-        // show role-aware dashboard
-        if (user?.role === 'instructor') return <InstructorDashboard />
-        if (user?.role === 'student') return <StudentDashboard />
-        return <Dashboard onOpenStudent={(id: string) => { setSelectedStudentId(id); setActiveTab('student'); }} />
-      case 'students':
-        return <Students onOpenStudent={(id: string) => { setSelectedStudentId(id); setActiveTab('student'); }} />
-      case 'subscription':
-        return <Subscription />
-      case 'student':
-        return selectedStudentId ? (
-          <StudentLayout studentId={selectedStudentId} onBack={() => { setSelectedStudentId(null); setActiveTab('students'); }} />
-        ) : (
-          <Students onOpenStudent={(id: string) => { setSelectedStudentId(id); setActiveTab('student'); }} />
-        )
-      case 'settings':
-        return <Settings />
-      default:
-        if (user?.role === 'instructor') return <InstructorDashboard />
-        if (user?.role === 'student') return <StudentDashboard />
-        return <Dashboard onOpenStudent={(id: string) => { setSelectedStudentId(id); setActiveTab('student'); }} />
-    }
-  }
+  
+  // Determine if we should show sidebar based on current route
+  const hideSidebar = location.pathname.startsWith('/student/')
 
   return (
     <ThemeProvider>
       <div className="app-container">
-        {/* Hide the global Sidebar if a student view is open */}
-        {!(useView().viewingStudentId) && activeTab !== 'student' && <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />}
-        <main className={`main-content ${activeTab === 'student' || useView().viewingStudentId ? 'full-width' : ''}`}>
-          {renderContent()}
+        {!hideSidebar && <Sidebar />}
+        <main className={`main-content ${hideSidebar ? 'full-width' : ''}`}>
+          <Routes>
+            {/* Dashboard route - role-aware */}
+            <Route path="/" element={
+              user?.role === 'instructor' ? <InstructorDashboard /> :
+              user?.role === 'student' ? <StudentDashboard /> :
+              <Dashboard />
+            } />
+            
+            {/* Instructor routes */}
+            <Route path="/classroom/:classroomId" element={<InstructorClassroomPage />} />
+            <Route path="/students" element={<Students />} />
+            <Route path="/student/:studentId" element={<StudentLayoutWrapper />} />
+            
+            {/* Shared routes */}
+            <Route path="/schedule" element={<Schedule studentId={user?.role === 'student' ? user.id : undefined} />} />
+            <Route path="/notebooks" element={<Notebooks studentId={user?.role === 'student' ? user.id : undefined} />} />
+            <Route path="/documents" element={<DocumentsDashboard studentId={user?.role === 'student' ? user.id : undefined} />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/subscription" element={<Subscription />} />
+            
+            {/* Catch-all redirect */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </main>
       </div>
     </ThemeProvider>
   )
 }
 
+// Wrapper to handle student layout with URL params
+function StudentLayoutWrapper() {
+  const { studentId } = useParams<{ studentId: string }>()
+  const navigate = useNavigate()
+  
+  if (!studentId) return <Navigate to="/students" replace />
+  
+  return (
+    <StudentLayout 
+      studentId={studentId} 
+      onBack={() => navigate('/students')} 
+    />
+  )
+}
+
 function App() {
-  const [view, setView] = useState<'landing'|'login'|'register'|'forgot-password'|'reset-password'>('landing')
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <ViewProvider>
+          <AppRoutes />
+        </ViewProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  )
+}
+
+function AppRoutes() {
+  const { user } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [authView, setAuthView] = useState<'landing'|'login'|'register'|'forgot-password'|'reset-password'>('landing')
 
   // Check if URL has reset password token
   useEffect(() => {
     const hashParams = new URLSearchParams(window.location.hash.substring(1))
     if (hashParams.get('type') === 'recovery') {
-      setView('reset-password')
+      setAuthView('reset-password')
     }
   }, [])
-
-  return (
-    <AuthProvider>
-      <ViewProvider>
-        <div>
-          {/* If user not logged in show landing/login/register flows */}
-          <AuthProviderWrapper view={view} setView={setView} />
-        </div>
-      </ViewProvider>
-    </AuthProvider>
-  )
-}
-
-function AuthProviderWrapper({ view, setView }: { view: string; setView: (v: any) => void }) {
-  const { user } = useAuth()
   
   // Show reset password page even if user is logged in (for password recovery flow)
-  if (view === 'reset-password') {
+  if (authView === 'reset-password') {
     return <ResetPassword />
   }
   
   if (!user) {
-    switch (view) {
+    switch (authView) {
       case 'login':
-        return <Login onCancel={() => setView('landing')} onForgotPassword={() => setView('forgot-password')} />
+        return <Login onCancel={() => setAuthView('landing')} onForgotPassword={() => setAuthView('forgot-password')} />
       case 'register':
-        return <Register onCancel={() => setView('landing')} />
+        return <Register onCancel={() => setAuthView('landing')} />
       case 'forgot-password':
-        return <ForgotPassword onBack={() => setView('login')} />
+        return <ForgotPassword onBack={() => setAuthView('login')} />
       default:
-        return <Landing onStart={(m) => setView(m)} />
+        return <Landing onStart={(m) => setAuthView(m)} />
     }
   }
-  // user is logged in -> show main app
+  
+  // user is logged in -> show main app with routes
   return <InnerApp />
 }
 

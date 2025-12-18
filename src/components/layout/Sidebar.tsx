@@ -1,20 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import './Sidebar.css';
 import { useAuth } from '../../auth/AuthContext';
 
-interface SidebarProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-}
-
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
+export const Sidebar: React.FC = () => {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
   
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'students', label: 'Students', icon: '👥' },
-    ...(user?.role === 'instructor' ? [{ id: 'subscription', label: 'Subscription', icon: '💳' }] : []),
-    { id: 'settings', label: 'Settings', icon: '⚙️' },
+    { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/' },
+    ...(user?.role === 'instructor' ? [{ id: 'students', label: 'Students', icon: '👥', path: '/students' }] : []),
+    { id: 'schedule', label: 'Schedule', icon: '📅', path: '/schedule' },
+    { id: 'notebooks', label: 'Notebooks', icon: '📓', path: '/notebooks' },
+    { id: 'documents', label: 'Sheet Music', icon: '📄', path: '/documents' },
+    ...(user?.role === 'instructor' ? [{ id: 'subscription', label: 'Subscription', icon: '💳', path: '/subscription' }] : []),
+    { id: 'settings', label: 'Settings', icon: '⚙️', path: '/settings' },
   ];
 
   const [open, setOpen] = useState(false)
@@ -52,13 +53,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         <ul className="nav-list">
           {tabs.map((tab) => (
             <li key={tab.id}>
-              <button
-                className={`nav-button ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => onTabChange(tab.id)}
+              <NavLink
+                to={tab.path}
+                className={({ isActive }) => `nav-button ${isActive ? 'active' : ''}`}
               >
                 <span className="nav-icon">{tab.icon}</span>
                 <span className="nav-label">{tab.label}</span>
-              </button>
+              </NavLink>
             </li>
           ))}
         </ul>
@@ -92,7 +93,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
         {open && (
           <div id="profile-menu" className="profile-menu" role="menu" onKeyDown={handleMenuKey}>
-            <button ref={firstMenuRef} role="menuitem" className="btn-secondary" onClick={() => onTabChange('settings')}>Settings</button>
+            <button ref={firstMenuRef} role="menuitem" className="btn-secondary" onClick={() => { setOpen(false); navigate('/settings'); }}>Settings</button>
             <button role="menuitem" className="primary-btn" onClick={() => logout()}>Sign out</button>
           </div>
         )}

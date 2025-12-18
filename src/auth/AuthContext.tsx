@@ -8,7 +8,9 @@ import {
   createClassroom,
   listClassrooms as sbListClassrooms,
   getClassroomMembers,
-  getTier
+  getTier,
+  updateClassroom,
+  deleteClassroom
 } from '../data/supabaseApi'
 import { supabase } from '../lib/supabase'
 
@@ -28,6 +30,8 @@ interface AuthContextValue {
   register: (identifier: string, password: string, username: string, role: 'student' | 'instructor') => Promise<{ ok: boolean; error?: string }>
   joinClassroom: (code: string) => Promise<{ ok: boolean; error?: string }>
   createClassroom: (name: string, maxSize?: number) => Promise<{ ok: boolean; classroomId?: string; error?: string }>
+  editClassroom: (id: string, fields: { name?: string; description?: string | null; maxSize?: number | null }) => Promise<{ ok: boolean; error?: string }>
+  removeClassroom: (id: string) => Promise<{ ok: boolean; error?: string }>
   createCode: (classroomId: string) => Promise<{ code: string; error?: string }>
   listClassrooms: () => Promise<any[]>
   listCodes: (classroomId?: string) => Promise<any[]>
@@ -155,6 +159,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { ok: true, classroomId: 'mock-classroom' }
   }
 
+  const editClassroomFn = async (id: string, fields: { name?: string; description?: string | null; maxSize?: number | null }) => {
+    if (!user) return { ok: false, error: 'not_logged_in' }
+    if (USE_SUPABASE) {
+      try {
+        await updateClassroom(id, {
+          name: fields.name,
+          description: fields.description,
+          max_size: fields.maxSize ?? undefined,
+        })
+        return { ok: true }
+      } catch (e: any) {
+        return { ok: false, error: e.message || 'update_failed' }
+      }
+    }
+    return { ok: true }
+  }
+
+  const removeClassroomFn = async (id: string) => {
+    if (!user) return { ok: false, error: 'not_logged_in' }
+    if (USE_SUPABASE) {
+      try {
+        await deleteClassroom(id)
+        return { ok: true }
+      } catch (e: any) {
+        return { ok: false, error: e.message || 'delete_failed' }
+      }
+    }
+    return { ok: true }
+  }
+
   const createCodeFn = async (classroomId: string) => {
     if (USE_SUPABASE) {
       try {
@@ -205,6 +239,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       register, 
       joinClassroom, 
       createClassroom: createClassroomFn,
+      editClassroom: editClassroomFn,
+      removeClassroom: removeClassroomFn,
       createCode: createCodeFn, 
       listClassrooms: listClassroomsFn,
       listCodes: listCodesFn, 
