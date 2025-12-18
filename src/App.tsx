@@ -8,7 +8,7 @@ import { Settings } from './pages/Settings'
 import { Subscription } from './pages/Subscription'
 import { StudentLayout } from './components/classroom/StudentLayout'
 import { ThemeProvider } from './context/ThemeContext'
-import { ViewProvider, useView } from './context/ViewContext'
+import { ViewProvider } from './context/ViewContext'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { Landing } from './pages/Landing'
 import { Login } from './pages/Login'
@@ -50,7 +50,7 @@ function InnerApp() {
             {/* Shared routes */}
             <Route path="/schedule" element={<Schedule studentId={user?.role === 'student' ? user.id : undefined} />} />
             <Route path="/notebooks" element={<Notebooks studentId={user?.role === 'student' ? user.id : undefined} />} />
-            <Route path="/documents" element={<DocumentsDashboard studentId={user?.role === 'student' ? user.id : undefined} />} />
+            <Route path="/documents" element={<DocumentsDashboard />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/subscription" element={<Subscription />} />
             
@@ -92,8 +92,6 @@ function App() {
 
 function AppRoutes() {
   const { user } = useAuth()
-  const location = useLocation()
-  const navigate = useNavigate()
   const [authView, setAuthView] = useState<'landing'|'login'|'register'|'forgot-password'|'reset-password'>('landing')
 
   // Check if URL has reset password token

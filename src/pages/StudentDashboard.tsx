@@ -49,7 +49,7 @@ export const StudentDashboard: React.FC = () => {
       case 'notebooks':
         return <Notebooks studentId={user?.id} availableDocuments={documents} />
       case 'documents':
-        return <DocumentsDashboard studentId={user?.id} onDocumentsChange={setDocuments} />
+        return <DocumentsDashboard onDocumentsChange={setDocuments} />
       default:
         return null
     }

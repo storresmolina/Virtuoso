@@ -6,7 +6,6 @@ import { useAuth } from '../../auth/AuthContext';
 export const Sidebar: React.FC = () => {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
   
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/' },
